@@ -1,0 +1,75 @@
+# LittleRoots free video converter.
+# Started by the Admin page after an upload. Turns the original video into TV-ready streaming files
+# (720p + 480p HLS), makes a thumbnail, stores everything in Cloudflare R2 and reports back.
+#
+# Repository secrets needed (Settings -> Secrets and variables -> Actions):
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, CONVERTER_SECRET
+name: Convert video
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_id: { description: "Video id", required: true }
+      input_key: { description: "Original file in the R2 inbox", required: true }
+      output_prefix: { description: "Folder for the streaming files", required: true }
+      callback_url: { description: "Where to report back", required: true }
+
+run-name: "Convert ${{ inputs.video_id }}"
+
+concurrency:
+  group: convert-${{ inputs.video_id }}
+  cancel-in-progress: true
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # R2 doesn't support the newer default checksums of the AWS CLI
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      R2: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      BUCKET: ${{ secrets.R2_BUCKET }}
+      VIDEO_ID: ${{ inputs.video_id }}
+      INPUT_KEY: ${{ inputs.input_key }}
+      OUTPUT_PREFIX: ${{ inputs.output_prefix }}
+      CALLBACK_URL: ${{ inputs.callback_url }}
+      CONVERTER_SECRET: ${{ secrets.CONVERTER_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Download the original
+        run: aws s3 cp "s3://$BUCKET/$INPUT_KEY" "original.${INPUT_KEY##*.}" --endpoint-url "$R2" --only-show-errors
+
+      - name: Convert to streaming files
+        run: |
+          chmod +x tools/convert-to-hls.sh
+          tools/convert-to-hls.sh "original.${INPUT_KEY##*.}" out
+          ffprobe -v error -show_entries format=duration -of csv=p=0 "original.${INPUT_KEY##*.}" > duration.txt
+          ls -R output/out | head -20
+
+      - name: Upload streaming files
+        run: |
+          aws s3 cp output/out "s3://$BUCKET/$OUTPUT_PREFIX" --recursive --endpoint-url "$R2" --only-show-errors \
+            --exclude "*" --include "*.m3u8" --content-type "application/vnd.apple.mpegurl" --cache-control "public, max-age=300"
+          aws s3 cp output/out "s3://$BUCKET/$OUTPUT_PREFIX" --recursive --endpoint-url "$R2" --only-show-errors \
+            --exclude "*" --include "*.ts" --content-type "video/mp2t" --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp output/out/thumbnail.jpg "s3://$BUCKET/$OUTPUT_PREFIX/thumbnail.jpg" --endpoint-url "$R2" --only-show-errors \
+            --content-type "image/jpeg" --cache-control "public, max-age=86400"
+
+      - name: Report success
+        run: |
+          curl -fsS -X POST "$CALLBACK_URL" -H "Content-Type: application/json" -H "X-Converter-Secret: $CONVERTER_SECRET" \
+            -d "{\"videoId\":\"$VIDEO_ID\",\"status\":\"ready\",\"outputPrefix\":\"$OUTPUT_PREFIX\",\"durationS\":$(cut -d. -f1 duration.txt)}"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          curl -fsS -X POST "$CALLBACK_URL" -H "Content-Type: application/json" -H "X-Converter-Secret: $CONVERTER_SECRET" \
+            -d "{\"videoId\":\"$VIDEO_ID\",\"status\":\"failed\",\"outputPrefix\":\"$OUTPUT_PREFIX\",\"error\":\"The converter couldn't process this file. Try exporting it as MP4 (H.264) and upload again.\"}" || true

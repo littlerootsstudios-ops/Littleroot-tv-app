@@ -1,5 +1,13 @@
 # LittleRoots TV (main app)
 
+| Folder | What it is |
+|---|---|
+| `index.html`, `src/` | The TV and phone app (currently plays from YouTube) |
+| `api/` | Backend + Admin page: video library, uploads, catalog for the apps. See `api/README.md` |
+| `.github/workflows/convert.yml` | Free video converter (runs on GitHub after each Admin upload) |
+| `tools/` | Conversion script, TV-safe build, seed generator |
+| `brand/` | Logo and sound logo |
+
 Prototype of the LittleRoots streaming app for smart TVs (LG webOS, Hisense VIDAA), phones and browsers.
 
 - `index.html`: the whole app. Videos from the LittleRoots YouTube channel play inside the app's own player.

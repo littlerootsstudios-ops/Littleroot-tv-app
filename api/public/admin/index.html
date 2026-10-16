@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D322C">
+<meta name="robots" content="noindex">
+<title>LittleRoots Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,wght@9..144,100,600;9..144,100,800&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: a phone-first workbench. Sticky brand bar, library summary, filterable video list; editing opens in a full sheet. */
+:root {
+  --forest: #0D322C; --canopy: #13443B; --moss: #1E5A4D;
+  --gold: #D09D46; --gold-soft: #E7C27F;
+  --paper: #F7F3EA; --card: #FFFFFF; --ink: #17302B; --muted: #5D746C; --line: #E3DCCB;
+  --ok: #2F7D5B; --warn: #B7791F; --bad: #B4483A;
+  --display: "Fraunces", Georgia, serif; --body: "Nunito", system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3 { font-family: var(--display); font-variation-settings: "SOFT" 100; margin: 0; line-height: 1.15; }
+.wrap { width: min(980px, 100%); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+
+/* brand bar */
+.bar { position: sticky; top: 0; z-index: 10; background: var(--forest); color: #F3EBD8; padding-top: env(safe-area-inset-top); }
+.bar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; }
+.bar svg { width: 64px; flex: none; } .bar .st0 { fill: #F3EBD8; } .bar .st1 { fill: var(--gold); }
+.bar b { font-family: var(--display); font-weight: 600; font-size: 1.1rem; }
+.bar .sp { flex: 1; }
+.bar button { background: none; border: 1px solid rgba(243,235,216,.35); color: #F3EBD8; border-radius: 99px; padding: 6px 14px; font-weight: 700; font-size: .85rem; }
+
+/* buttons, fields */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; padding: 12px 18px; font-weight: 800; background: var(--forest); color: #fff; min-height: 46px; }
+.btn.gold { background: var(--gold); color: var(--forest); }
+.btn.ghost { background: transparent; color: var(--forest); border: 1.5px solid var(--line); }
+.btn.danger { background: transparent; color: var(--bad); border: 1.5px solid #E9C5BF; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .chip:focus-visible, .vcard:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+label.f { display: grid; gap: 6px; font-weight: 800; font-size: .88rem; }
+label.f small { font-weight: 600; color: var(--muted); }
+input[type=text], input[type=email], input[type=password], input[type=url], input[type=number], select, textarea {
+  width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; padding: 11px 12px; min-height: 46px;
+}
+textarea { min-height: 84px; resize: vertical; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } }
+.msg { min-height: 1.3em; font-weight: 700; font-size: .9rem; color: var(--bad); }
+.msg.ok { color: var(--ok); }
+
+/* sign in */
+.signin { min-height: 100vh; display: grid; place-items: center; background: var(--forest); padding: 24px 16px; }
+.signin form { width: min(400px, 100%); background: var(--paper); border-radius: 20px; padding: 28px 22px; display: grid; gap: 14px; }
+.signin svg { width: 120px; margin: 0 auto 4px; display: block; } .signin .st0 { fill: var(--forest); } .signin .st1 { fill: var(--gold); }
+.signin h1 { text-align: center; font-size: 1.5rem; }
+.signin p { margin: 0; text-align: center; color: var(--muted); font-size: .92rem; }
+.linkbtn { background: none; border: 0; color: var(--forest); font-weight: 800; text-decoration: underline; padding: 6px; }
+
+/* summary */
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding-block: 16px 6px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+.stat b { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .78rem; color: var(--muted); font-weight: 700; }
+.meter { height: 6px; background: var(--line); border-radius: 3px; margin-top: 8px; overflow: hidden; } .meter i { display: block; height: 100%; background: var(--gold); }
+@media (max-width: 640px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* tabs + filters */
+.tabs { display: flex; gap: 6px; border-bottom: 1.5px solid var(--line); margin-top: 10px; }
+.tabs button { background: none; border: 0; padding: 12px 6px; margin-bottom: -1.5px; font-weight: 800; color: var(--muted); border-bottom: 3px solid transparent; }
+.tabs button[aria-selected=true] { color: var(--forest); border-color: var(--gold); }
+.tools { display: flex; gap: 10px; align-items: center; padding-block: 14px 8px; flex-wrap: wrap; }
+.tools input { flex: 1; min-width: 160px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+.chip { flex: none; border: 1.5px solid var(--line); background: #fff; border-radius: 99px; padding: 7px 13px; font-weight: 800; font-size: .85rem; }
+.chip[aria-pressed=true] { background: var(--forest); color: #fff; border-color: var(--forest); }
+
+/* video list */
+.list { display: grid; gap: 10px; padding-block: 8px 100px; }
+.vcard { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; align-items: center; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; width: 100%; }
+.vcard img, .vcard .ph { width: 112px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 9px; background: var(--canopy); display: block; }
+.vcard h3 { font-size: 1rem; font-family: var(--body); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vcard .sub { font-size: .8rem; color: var(--muted); }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.tag { font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: #EEE8DA; color: var(--ink); }
+.tag.pub { background: #DDEFE5; color: var(--ok); } .tag.draft { background: #F3E6CF; color: var(--warn); }
+.tag.yt { background: #F6E1DE; color: var(--bad); } .tag.host { background: #DDEFE5; color: var(--ok); }
+.tag.work { background: #E4ECF7; color: #2D5B94; } .tag.fail { background: #F6E1DE; color: var(--bad); } .tag.star { background: var(--gold); color: var(--forest); }
+.empty { text-align: center; color: var(--muted); padding: 40px 10px; }
+.fab { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 5; box-shadow: 0 8px 24px rgba(13,50,44,.3); }
+
+/* editor sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; background: var(--paper); overflow-y: auto; }
+.sheet header { position: sticky; top: 0; z-index: 2; background: var(--paper); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top); }
+.sheet header .wrap { display: flex; align-items: center; gap: 10px; padding-block: 10px; }
+.sheet header h2 { flex: 1; font-size: 1.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheet form { display: grid; gap: 18px; padding-block: 18px 120px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; }
+.panel h3 { font-size: 1.05rem; }
+.media { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 14px; align-items: start; }
+.media img, .media .ph { width: 180px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; background: var(--canopy); display: block; }
+@media (max-width: 520px) { .media { grid-template-columns: 1fr; } .media img, .media .ph { width: 100%; } }
+.steps { display: grid; gap: 8px; }
+.step { display: flex; gap: 10px; align-items: center; font-weight: 700; font-size: .92rem; color: var(--muted); }
+.step i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: grid; place-items: center; font-style: normal; font-size: .75rem; }
+.step.on { color: var(--ink); } .step.on i { border-color: var(--gold); border-top-color: transparent; animation: spin 1s linear infinite; }
+.step.done { color: var(--ok); } .step.done i { background: var(--ok); border-color: var(--ok); color: #fff; }
+.step.err { color: var(--bad); } .step.err i { background: var(--bad); border-color: var(--bad); color: #fff; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; } .progress i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .2s; }
+.toggles { display: grid; gap: 4px; }
+.tg { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.tg:last-child { border-bottom: 0; }
+.tg span { display: grid; } .tg b { font-size: .95rem; } .tg small { color: var(--muted); font-weight: 600; font-size: .8rem; }
+.tg input { appearance: none; width: 52px; height: 30px; border-radius: 99px; background: var(--line); position: relative; flex: none; transition: background .2s; }
+.tg input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.tg input:checked { background: var(--ok); } .tg input:checked::after { transform: translateX(22px); }
+.savebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; background: var(--paper); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.savebar .wrap { display: flex; gap: 10px; align-items: center; padding-block: 10px; }
+.savebar .msg { flex: 1; }
+.talk { display: grid; gap: 8px; }
+
+/* categories */
+.ccard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+.ccard .top { display: flex; gap: 10px; align-items: center; }
+.ccard .top h3 { flex: 1; font-size: 1.05rem; }
+.toast { position: fixed; left: 50%; bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px)); transform: translateX(-50%); z-index: 40; background: var(--forest); color: #fff; padding: 10px 18px; border-radius: 99px; font-weight: 800; max-width: calc(100% - 32px); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .step.on i { animation: none; } }
+</style>
+</head>
+<body>
+
+<template id="logo"><svg viewBox="132 292 310 222" role="img" aria-label="LittleRoots">
+    <path class="st0" d="M190.71,408.07c7.52,0.24,14.56,0.78,21.17,4.18c5.28,2.72,8.92,7,10.26,12.28 c2.91,11.51,2.28,21.67-8.01,29.73c-1.98,1.55-2.34,2.83-1.36,5.08c4.24,9.69,9.03,19.1,13.88,28.48 c2.51,4.86,7.31,6.28,12.59,4.18c4.87-1.93,9.62-3.65,14.55-0.07c2.86,2.07,4.18,4.75,3.9,8.18c-0.24,3.04-2.27,4.83-4.91,5.82 c-2.8,1.04-5.01,0-6.47-2.58c-0.92-1.62-1.33-3.13,0.98-3.97c0.25,0.1,0.54,0.13,0.7,0.29c0.93,0.94,1.37,2.64,3.23,2.13 c1.16-0.32,1.58-1.25,1.59-2.35c0.02-1.86-1.31-2.55-2.76-3.25c-2.3-1.11-4.45-0.31-6.21,0.8c-8.31,5.25-16.13,4.88-23.56-1.84 c-1.14,5.33,2.33,7.78,6.34,10.23c-3.5,2.2-5.83,0.72-8.06-0.88c-2.45-1.76-3.33-4.48-3.88-7.25c-0.45-2.29-1.48-4.57-3.61-5.03 c-7.23-1.57-8.63-7.54-10.73-13.08c-1.75-4.64-3.43-9.3-5.21-13.93c-0.69-1.78-1.31-3.61-4.04-3.06c-2.59,0.53-3.23,1.99-3.1,4.36 c0.3,5.47,0.37,10.96,0.75,16.42c0.27,3.88-1.69,5.52-5.19,6.25c-5.96,1.24-6.48,1.85-7.41,7.89c-0.44,2.89-0.52,5.88-3.05,7.98 c-1.06,0.88-1.97,2.07-3.68,1.66c-1.21-1.71,0.52-2.77,0.92-4.1c0.41-1.34,0.79-2.67-0.08-4.24c-2.46,0.93-4.8,1.89-7.2,2.71 c-5.83,2.01-13.52-2.46-14.49-8.43c-0.55-3.4,0.73-6.04,3.83-7.59c2.36-1.18,4.76-1.14,6.72,0.86c1.89,1.93,2.17,3.88-0.49,5.76 c-0.46-0.35-0.92-0.57-1.19-0.94c-0.81-1.09-1.47-2.91-3.14-1.27c-1.51,1.48-0.87,3.21,0.64,4.27c1.97,1.38,4.05,2.74,6.73,1.42 c3.7-1.82,5.67-4.89,5.74-8.79c0.21-12.1,1.21-24.17,0.37-36.3c-0.79-11.44,0.24-22.95-0.88-34.4c-0.33-3.36,1.28-4.9,4.44-5.45 C177.62,409.14,183.95,408.27,190.71,408.07z M193.78,443.63c0.69-0.32,1.38-0.65,2.07-0.97c5.63-2.57,8.44-8.07,6.56-12.87 c-1.56-3.99-6.74-5.54-12.64-4.06c-2.04,0.51-2.77,1.58-2.72,3.45c0.1,3.79-0.23,7.59,0.51,11.37 C188.47,445.1,188.65,445.28,193.78,443.63z"/>
+    <path class="st1" d="M247.08,410.66c-1.72,4.79-6.29,8.31-3.66,14.88c-3.73-3.03-4.47-5.77-2.63-9.65 c4.3-9.07,1.97-9.82-2.98-17.04c-1.47,2.38,0.38,4.22,0.65,6.16c0.28,2.01,0.67,4.01-1.57,5.89c-1.26-3.32-0.93-7.05-4.01-9.47 c-3,1.51-1.9,3.91-1.27,6.1c0.57,1.97,1.35,3.87-1.36,5.46c-0.72-4.69-4.58-8.42-2.01-12.95c-1.96-2.08-3.32,0.76-5.12-0.24 c0.69-2.91,2.83-3.48,5.37-3.49c2.04-0.01,4.13,0.28,5.97-0.94c2.78-1.83,2.9-3.94-0.02-5.5c-7.17-3.83-11.41-9.98-13.17-17.51 c-2.19-9.36-0.92-18.34,6.49-25.38c4.03-3.84,5.7-3.53,9.22,0.62c0.55,0.65,0.99,1.54,2.11,1.34c2.47-7.41-2.1-15.55-9.42-16.62 c-12.84-1.88-18.99-11.28-19.61-22.1c7.32,2.81,15.58,1.89,21.78,7.35c3.07,2.71,5.2,5.98,4.34,10.41 c-0.18,0.95,0.01,1.79,1.4,2.11c1.11-3.68,1.94-7.48,3.4-11.03c1.45-3.51,3.17-6.95,6.12-10.85c-4.28,2.6-5.39,6.63-8.11,9.27 c-2.36-3.25-2-10.42,0.49-14.08c3.07-4.52,7.53-7.27,12.41-9.3c3.44-1.43,6.82-2.87,9.28-5.3c1.4,0.03,1.79,0.84,1.87,1.52 c1.48,12.21,0.31,24.68-14.79,30.3c-2.67,1-4.18,2.85-4.78,5.52c-1.13,5.07-1.14,10.06,0.65,15.05c1.27,3.56,1.23,7.29-0.01,10.88 c-0.63,1.82-0.67,3.27,0.5,4.99c3.39,5.01,4.27,10.75,4.45,16.69c3.98-9.52,0.61-18.53-2.77-27.48c2.5-0.55,3.41,0.62,4.37,1.56 c11.35,11.07,9.76,33.65-3.92,41.45c-1.19,0.68-2.19,1.51-1.67,3.04c0.64,1.86,2.29,2.38,4,2.37c1.51-0.01,3.02-0.53,4.54-0.63 c2.19-0.14,3.96,0.59,4.9,2.88c-1.78,0.9-3.62-1.09-5.62,0.83c5.22,2.74,3.37,9.55,8.72,13.08c-3.69,0.93-5.82-0.89-6.2-2.96 c-1.31-7.01-7.28-8.05-12.59-10.82c0.42,3.69,2.7,5.47,5.09,7.16c2.25,1.59,4.18,3.44,4.54,6.31c0.17,1.33,0.38,2.84-1.21,3.73 c-1.45-0.69-1.01-2.23-1.56-3.3C249.11,409.86,248.5,408.38,247.08,410.66z"/>
+    <path class="st0" d="M185.49,327.66c-0.24,11.2-0.55,22.02-0.67,32.84c-0.04,3.81,0.56,7.63,0.56,11.44c0,3.15,1.5,4.42,4.41,4.41 c3.97-0.02,7.94-0.11,11.91-0.19c0.77-0.02,1.53-0.15,2.3-0.2c9.85-0.57,10.86,0.36,10.9,10.06c0,0.77,0,1.53,0.02,2.3 c0.23,8.21,0.05,8.45-8.43,8.5c-10.64,0.06-21.27,0.01-31.91,0c-8.99-0.01-18.12,6.32-21.12,14.63c-0.21,0.58-0.29,1.27-1.11,1.36 c-2.53-3.02-2.09-5.57,2.24-12.64c-1.47-1.3-3.15-2.47-4.43-3.97c-3.27-3.83-1.68-9.16,2.98-10.37c2.93-0.76,4.56,0.51,4.83,3.76 c-0.21,0.13-0.42,0.34-0.65,0.37c-1.57,0.25-4.22-0.85-3.8,2.15c0.37,2.66,2.87,3.21,5.09,2.75c2.9-0.6,4.73-2.7,4.9-5.66 c0.19-3.41,0.6-6.8,0.47-10.27c-0.53-14.65-0.77-29.3-1.16-43.96c-0.13-4.84-0.37-9.67-0.66-14.5c-0.2-3.27,0.59-5.3,4.48-5.58 c4.31-0.31,8.59-1.25,12.87-1.97c3.85-0.65,5.51,1.41,5.78,4.81C185.54,320.89,185.44,324.09,185.49,327.66z"/>
+    <path class="st0" d="M381.68,382.74c3.58,0.03,6.8-0.14,9.98,0.15c5.17,0.46,5.43,0.9,5.58,6.15c0.19,6.91,6.27,12.25,12.68,11.17 c2.16-0.36,3.46-1.63,3.81-3.71c0.31-1.86-0.02-3.53-2.03-4c-1.85,0.67-0.67,2.58-1.93,3.34c-2.2,0.06-2.87-1.3-2.95-3.16 c-0.08-1.86,0.78-3.14,2.49-3.92c2.78-1.26,5.27-0.79,7.43,1.26c2.53,2.41,3.03,6.94,1.22,10.28c-2.3,4.25-6.32,5.61-10.93,6.02 c1.14,5.04,6.24,3.83,9.15,5.93c-2.89,2.78-7.2,2.75-10.73-0.2c-2.14-1.79-3.97-3.97-5.81-6.09c-2.57-2.96-5.66-4.67-9.68-4.64 c-10,0.06-20,0.08-30,0.08c-5.07,0-5.31-0.49-5.58-5.43c-1.08-20.12-0.17-40.29-1.49-60.41c-0.26-3.94-0.6-7.88-0.69-11.82 c-0.09-4.34,1.19-5.67,5.53-6.17c3.18-0.36,6.37-0.62,9.55-1c4.09-0.49,5.36,0.53,5.36,4.72c0.03,16.71,0.01,33.43,0.02,50.14 c0,0.89,0,1.79,0.01,2.68C372.7,382.63,372.7,382.63,381.68,382.74z"/>
+    <path class="st0" d="M353.87,478.26c-1.14-9.08-0.14-17.87-0.14-26.65c0-3.14-1.05-4.58-4.22-4.23c-3.41,0.38-4.57-1.55-4.74-4.52 c-0.09-1.53-0.17-3.06-0.22-4.59c-0.11-3.21,1.26-5.17,4.67-5.2c3.35-0.03,4.84-1.4,4.52-4.94c-0.3-3.42,0.05-6.89-0.1-10.33 c-0.13-2.94,0.92-4.63,4-4.87c3.83-0.3,7.64-0.73,11.47-1c2.88-0.2,3.78,1.45,3.7,4.08c-0.13,4.34-0.06,8.68-0.23,13.01 c-0.09,2.47,0.83,3.57,3.36,3.33c1.14-0.11,2.31,0.03,3.46-0.04c2.6-0.16,3.8,1.19,3.94,3.6c0.1,1.65,0.1,3.32,0.09,4.97 c-0.06,6.78-0.34,7.18-7.04,7.2c-2.86,0.01-3.86,1.08-3.81,3.85c0.12,6,0.13,12,0,17.99c-0.07,3.49,1.92,4.8,4.9,5.16 c4.87,0.58,6.37,1.97,6.64,6.93c0.18,3.31,0.01,6.64,0.11,9.95c0.12,4.26,2.19,7.14,5.66,8.21c1.79,0.55,3.56,0.4,4.34-1.32 c1.01-2.23-0.85-2.44-2.47-2.63c-0.86-0.1-1.5-0.66-1.35-1.53c0.23-1.37,1.15-2.23,2.52-2.54c3.4-0.76,6.89,2.98,6.31,6.76 c-0.95,6.15-9.09,8.6-14.75,4.43c-2.61-1.92-4.31-4.67-6.62-7.46c-1.41,4.49-2.98,8.63-8.12,9.41c-1.29-1.28-0.48-2.21,0.17-3.15 c3.74-5.47,2.87-8.41-3.53-10.38C359.62,489.67,355.6,485.28,353.87,478.26z"/>
+    <path class="st0" d="M258.23,431.84c8.78,0.64,15.93,3.98,20.15,11.34c6.48,11.31,7.58,27.06-3.48,36.43 c-8.69,7.37-18.89,7.62-28.97,3.95c-10.19-3.7-15.49-11.63-16.14-22.5c-0.38-6.35,0.35-12.44,3.76-18.01 C239.16,433.9,247.78,431.28,258.23,431.84z M248.75,457.58c0.13,4.85,1.55,6.72,5.99,7.93c3.28,0.89,6.01,0.26,8.03-2.65 c2.35-3.38,1.99-6.67-0.28-9.89c-1.78-2.53-4.22-3.49-7.3-2.94C251.28,450.74,249.21,453.08,248.75,457.58z"/>
+    <path class="st0" d="M291.65,445.82c4.41-8.6,11.63-12.14,20.65-12.75c6.29-0.42,12.14,0.79,17.64,4.04 c14.34,8.47,17.39,36.39,0.43,46.15c-13.18,7.59-32.58,2.81-38.88-10.48C287.39,464.14,288,454.98,291.65,445.82z M308.77,454.86 c-2.07,5.66-0.83,9.96,3.37,11.71c3.77,1.57,8.28,0.38,9.81-2.59c2.1-4.05,0.97-9.28-2.51-11.61 C315.91,450.01,312.14,450.73,308.77,454.86z"/>
+    <path class="st0" d="M396.73,433.01c7.41-5.66,15.48-7.51,24.38-5.92c2.89,0.52,5.83,0.81,8.69,1.48c3.34,0.78,5.03,2.95,4.31,6.48 c-0.53,2.6-1,5.2-1.92,7.76c-1.04,2.89-2.81,3.37-5.36,2.69c-3.82-1.02-7.54-2.46-11.63-2c-1.72,0.19-3.58,0.23-3.9,2.29 c-0.3,1.94,1.7,2,2.88,2.48c3.53,1.46,7.32,2.1,10.84,3.76c8.64,4.06,11.96,11.76,11.32,19.08c-0.73,8.35-7.49,14.71-16.13,16.78 c-7.91,1.9-15.46,0.68-23.09-1.15c-1.79-0.43-3.35-1.29-4.81-2.31c-1.82-1.27-2.79-2.67-1.45-5.14c1.51-2.77,2.4-5.87,3.59-8.82 c0.96-2.38,2.27-3.37,5.03-2.04c3.43,1.65,6.97,3.22,10.99,2.97c2.28-0.14,4.86-0.59,5.19-2.94c0.31-2.22-2.4-2.56-4.14-3.21 c-5.35-1.98-11.12-2.96-15.26-7.53C389.15,449.85,389.15,441.1,396.73,433.01z"/>
+    <path class="st0" d="M342.66,357.3c-1.45,0.15-2.67,0.46-3.73,0.18c-3.67-0.95-4.87,0.49-4.75,4.06 c0.17,5.22-0.02,10.45,0.06,15.68c0.08,5.36,1.24,6.51,6.47,6.82c0.64,0.04,1.45-0.14,1.88,0.18c4.2,3.16,2.41,8.15,3.64,12.24 c0.56,1.85-0.66,3.18-2.25,3.99c-7.69,3.95-21.57,0.35-25.88-6.89c-2.44-4.1-3.61-8.71-3.59-13.5c0.03-6.75-0.35-13.51,0.48-20.24 c0.27-2.19-0.51-3.23-2.85-3.54c-5.4-0.7-5.4-0.81-5.42-6.21c-0.01-1.27,0.07-2.55-0.01-3.82c-0.17-2.83,0.97-4.43,3.96-4.29 c3.55,0.17,4.76-1.59,4.52-4.95c-0.27-3.68-0.36-7.37-0.42-11.06c-0.03-2.3,0.94-3.61,3.5-4.14c4.04-0.84,8.06-1.32,12.17-1.43 c3.15-0.09,4.5,1.37,4.43,4.33c-0.1,4.08-0.08,8.17-0.47,12.22c-0.31,3.23,0.65,4.53,4.02,4.13c5.76-0.69,7.14,0.47,7,6.35 C345.36,350.78,346.55,354.63,342.66,357.3z"/>
+    <path class="st0" d="M272.08,338.62c0.03-4.78,0.03-9.24,0.01-13.7c-0.01-2.53,0.98-4.17,3.72-4.37c3.57-0.26,7.13-0.67,10.7-0.77 c4.52-0.13,5.21,0.84,4.92,5.46c-0.24,3.81-0.15,7.64-0.38,11.45c-0.17,2.83,0.96,4.04,3.8,3.71c1.01-0.12,2.05-0.06,3.07-0.17 c3.13-0.34,4.52,1.22,4.63,4.15c0.06,1.53,0.06,3.06-0.01,4.59c-0.29,6.65-1.42,8.68-8.06,7.9c-2.5-0.3-3.45,0.86-3.41,3.31 c0.09,5.6-0.02,11.21,0.07,16.82c0.07,4.28,2.09,6.42,6.4,6.26c3.68-0.14,5.01,1.33,5.2,4.85c0.14,2.52,0.67,5.02,0.7,7.58 c0.02,2.25-0.95,3.77-2.96,4.39c-7.47,2.29-19.31,1.18-24.63-6.71c-2.4-3.56-3.73-7.49-3.73-11.82c0-7.26-0.1-14.53,0.05-21.79 c0.06-2.98-0.65-4.69-4.02-4.31c-3.01,0.34-4.16-1.42-4.34-4.07c-0.11-1.52-0.03-3.06-0.11-4.58c-0.18-3.51,1.39-5.49,4.93-6.03 C269.92,340.56,271.61,340.83,272.08,338.62z"/>
+    <path class="st0" d="M431.14,365.82c1.5,3.11,1.58,5.51-1.51,7.49c-14.7,9.39-35.03,6.37-43.91-9.14 c-5.39-9.41-4.95-19.1,1.35-28.07c5.87-8.35,14.4-10.85,24.24-9.88c8.62,0.85,14.56,5.42,18.68,12.87 c1.63,2.95,0.83,4.69-1.53,6.47c-5.82,4.39-12.3,7.75-18.36,11.77c-1.16,0.77-2.46,1.36-3.22,3.19c3.93,2.28,7.8,1.59,11.54-0.15 c7.21-3.35,7.17-3.43,11.39,3.24C430.23,364.26,430.64,364.91,431.14,365.82z M410.39,340.61c-6.09-0.86-9.67,2.84-8.43,9.18 c3.88-1.26,6.98-3.52,9.61-6.46C412.41,342.39,411.96,341.43,410.39,340.61z"/>
+  </svg></template>
+
+<!-- Sign in -->
+<section class="signin" id="signin" hidden>
+  <form id="signinForm" novalidate>
+    <div data-logo></div>
+    <h1 id="siTitle">Admin sign in</h1>
+    <p id="siLead">Manage the LittleRoots library.</p>
+    <label class="f" id="nameField" hidden>Your name<input type="text" id="siName" autocomplete="name"></label>
+    <label class="f">Email<input type="email" id="siEmail" autocomplete="username" required></label>
+    <label class="f">Password<input type="password" id="siPass" autocomplete="current-password" required minlength="8"></label>
+    <div class="msg" id="siMsg" role="alert"></div>
+    <button class="btn gold" id="siBtn">Sign in</button>
+    <button type="button" class="linkbtn" id="siSwitch">First time here? Create your admin account</button>
+  </form>
+</section>
+
+<!-- App -->
+<section id="app" hidden>
+  <div class="bar"><div class="wrap"><div data-logo></div><b>Admin</b><span class="sp"></span><button id="signOut">Sign out</button></div></div>
+  <div class="wrap">
+    <div class="summary" id="summary"></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="videos">Videos</button>
+      <button role="tab" aria-selected="false" data-tab="cats">Categories</button>
+    </div>
+    <div id="tab-videos">
+      <div class="tools"><input type="text" id="search" placeholder="Search videos" aria-label="Search videos"></div>
+      <div class="chips" id="filters"></div>
+      <div class="list" id="videoList"></div>
+    </div>
+    <div id="tab-cats" hidden>
+      <div class="tools"><button class="btn ghost" id="addCat">+ New category</button></div>
+      <div class="list" id="catList"></div>
+    </div>
+  </div>
+  <button class="btn gold fab" id="newVideo">+ New video</button>
+</section>
+
+<!-- Video editor -->
+<section class="sheet" id="editor" hidden aria-modal="true" role="dialog" aria-labelledby="edTitle">
+  <header><div class="wrap"><button class="btn ghost" id="edClose" aria-label="Back to videos">← Back</button><h2 id="edTitle">New video</h2></div></header>
+  <form class="wrap" id="edForm" novalidate>
+    <div class="panel">
+      <h3>Video</h3>
+      <div class="media">
+        <div id="edThumb"></div>
+        <div style="display:grid;gap:12px;min-width:0">
+          <div id="edSource" class="sub"></div>
+          <div class="steps" id="edSteps" hidden>
+            <div class="step" data-s="upload"><i></i><span>Uploading <span id="edPct"></span></span></div>
+            <div class="progress" id="edBar"><i></i></div>
+            <div class="step" data-s="convert"><i></i><span>Converting for TVs and phones (a few minutes)</span></div>
+            <div class="step" data-s="ready"><i></i><span>Ready to watch</span></div>
+          </div>
+          <label class="btn gold" for="edFile" id="edFileBtn">Upload video file</label>
+          <input type="file" id="edFile" accept="video/*" hidden>
+          <details id="edYtBox"><summary style="font-weight:800;cursor:pointer">Or use a YouTube link for now</summary>
+            <label class="f" style="margin-top:10px">YouTube link<input type="url" id="edYt" placeholder="https://youtu.be/…"><small>Paste the link from the Share button. You can replace it with an uploaded file later.</small></label>
+          </details>
+          <label class="btn ghost" for="edImg">Change thumbnail</label>
+          <input type="file" id="edImg" accept="image/jpeg,image/png,image/webp" hidden>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Details</h3>
+      <label class="f">Title<input type="text" id="edT" required maxlength="120"></label>
+      <div class="row2">
+        <label class="f">Category<select id="edCat"></select></label>
+        <label class="f">Bible reference <small>optional, e.g. Genesis 6–9</small><input type="text" id="edRef" maxlength="60"></label>
+      </div>
+      <div class="row2">
+        <label class="f">Type <small>e.g. Bible story, Song</small><input type="text" id="edKind" maxlength="40"></label>
+        <label class="f">Ages <small>e.g. 3–8, All ages, Parents</small><input type="text" id="edAge" maxlength="20"></label>
+      </div>
+      <label class="f">Description<textarea id="edDesc" maxlength="400"></textarea></label>
+    </div>
+    <div class="panel">
+      <h3>Talk about it together</h3>
+      <div class="sub">Questions families see after the video. Up to 3.</div>
+      <div class="talk" id="edTalk"></div>
+    </div>
+    <div class="panel">
+      <h3>Where it appears</h3>
+      <div class="toggles">
+        <label class="tg"><span><b>Published</b><small>Show it in the app. Off = draft, only you can see it.</small></span><input type="checkbox" id="edPub"></label>
+        <label class="tg"><span><b>Featured story</b><small>The big banner on the home screen (one at a time).</small></span><input type="checkbox" id="edFeat"></label>
+        <label class="tg"><span><b>Bedtime</b><small>Also list it in the Bedtime row.</small></span><input type="checkbox" id="edBed"></label>
+        <label class="tg"><span><b>Short (portrait)</b><small>A vertical YouTube Short-style video.</small></span><input type="checkbox" id="edShort"></label>
+        <label class="tg"><span><b>For parents</b><small>Shows a "For parents" badge.</small></span><input type="checkbox" id="edPar"></label>
+      </div>
+    </div>
+    <div class="panel" id="edDanger" hidden>
+      <h3>Delete</h3>
+      <div class="sub">Removes the video and its files from the app. Keep your original in Google Drive.</div>
+      <button type="button" class="btn danger" id="edDel">Delete this video</button>
+    </div>
+  </form>
+  <div class="savebar"><div class="wrap"><div class="msg" id="edMsg" role="status"></div><button class="btn gold" id="edSave" form="edForm">Save</button></div></div>
+</section>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const API = location.origin;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+let token = null; try { token = localStorage.getItem("lr-admin"); } catch (e) {}
+let videos = [], cats = [], filter = "all", current = null, polling = null;
+
+document.querySelectorAll("[data-logo]").forEach(d => d.innerHTML = $("#logo").innerHTML);
+function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2600); }
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { ...(opts.body && !(opts.body instanceof Blob) ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}), ...(opts.headers || {}) } });
+  const data = r.status === 204 ? {} : await r.json().catch(() => ({}));
+  if (r.status === 401 && !path.startsWith("/api/auth/")) { signOutLocal(); throw new Error("Please sign in again."); }
+  if (!r.ok) throw new Error(data.message || "Something went wrong. Please try again.");
+  return data;
+}
+
+/* ---------- sign in ---------- */
+let creating = false;
+$("#siSwitch").onclick = () => {
+  creating = !creating;
+  $("#nameField").hidden = !creating;
+  $("#siTitle").textContent = creating ? "Create admin account" : "Admin sign in";
+  $("#siLead").textContent = creating ? "Only approved LittleRoots emails can create one." : "Manage the LittleRoots library.";
+  $("#siBtn").textContent = creating ? "Create account" : "Sign in";
+  $("#siSwitch").textContent = creating ? "Already have an account? Sign in" : "First time here? Create your admin account";
+  $("#siPass").autocomplete = creating ? "new-password" : "current-password";
+  $("#siMsg").textContent = "";
+};
+$("#signinForm").onsubmit = async e => {
+  e.preventDefault();
+  $("#siBtn").disabled = true; $("#siMsg").textContent = "";
+  try {
+    const d = await api(creating ? "/api/auth/register" : "/api/auth/login", { method: "POST", body: JSON.stringify({ email: $("#siEmail").value, password: $("#siPass").value, name: $("#siName").value }) });
+    token = d.token; try { localStorage.setItem("lr-admin", token); } catch (err) {}
+    $("#siPass").value = ""; start();
+  } catch (err) { $("#siMsg").textContent = err.message; }
+  $("#siBtn").disabled = false;
+};
+function signOutLocal() { token = null; try { localStorage.removeItem("lr-admin"); } catch (e) {} $("#app").hidden = true; $("#editor").hidden = true; $("#signin").hidden = false; }
+$("#signOut").onclick = async () => { try { await api("/api/auth/logout", { method: "POST" }); } catch (e) {} signOutLocal(); };
+
+/* ---------- main ---------- */
+async function start() {
+  if (!token) { $("#signin").hidden = false; return; }
+  try { await api("/api/me"); } catch (e) { return; }
+  $("#signin").hidden = true; $("#app").hidden = false;
+  await Promise.all([loadVideos(), loadCats(), loadStats()]);
+}
+async function loadStats() {
+  const s = await api("/api/admin/stats");
+  const used = s.storage.usedBytes, pct = Math.min(100, used / s.storage.freeTierBytes * 100);
+  const gb = b => b >= 1e9 ? (b / 1024 ** 3).toFixed(1) + " GB" : Math.max(0, b / 1024 ** 2).toFixed(0) + " MB";
+  $("#summary").innerHTML = `
+    <div class="stat"><b>${s.videos.published || 0}</b><span>Published</span></div>
+    <div class="stat"><b>${s.videos.hosted || 0}</b><span>On your storage</span></div>
+    <div class="stat"><b>${s.videos.youtube || 0}</b><span>Still on YouTube</span></div>
+    <div class="stat"><b>${gb(used)}</b><span>of 10 GB free storage</span><div class="meter"><i style="width:${pct}%"></i></div></div>`;
+}
+async function loadCats() {
+  cats = (await api("/api/admin/categories")).categories;
+  $("#filters").innerHTML = [{ id: "all", name: "All" }, ...cats, { id: "draft", name: "Drafts" }, { id: "yt", name: "Still on YouTube" }]
+    .map(k => `<button class="chip" data-f="${esc(k.id)}" aria-pressed="${filter === k.id}">${esc(k.name)}</button>`).join("");
+  $("#filters").querySelectorAll(".chip").forEach(b => b.onclick = () => { filter = b.dataset.f; loadCats().then(renderVideos); });
+  $("#edCat").innerHTML = `<option value="">Choose…</option>` + cats.map(k => `<option value="${esc(k.id)}">${esc(k.name)}</option>`).join("");
+  renderCats();
+  if (videos.length) renderVideos();
+}
+async function loadVideos() { videos = (await api("/api/admin/videos")).videos; renderVideos(); }
+
+function tagsFor(v) {
+  const t = [v.status === "published" ? `<span class="tag pub">Published</span>` : `<span class="tag draft">Draft</span>`];
+  if (v.processing === "uploading") t.push(`<span class="tag work">Uploading…</span>`);
+  else if (v.processing === "converting") t.push(`<span class="tag work">Converting…</span>`);
+  else if (v.processing === "failed") t.push(`<span class="tag fail">Conversion failed</span>`);
+  if (v.source === "hls" && v.processing === "ready") t.push(`<span class="tag host">Your storage</span>`);
+  else if (v.source === "youtube") t.push(`<span class="tag yt">YouTube</span>`);
+  else if (!v.source && v.processing === "none") t.push(`<span class="tag fail">No video yet</span>`);
+  if (v.featured) t.push(`<span class="tag star">★ Featured</span>`);
+  return t.join("");
+}
+function renderVideos() {
+  const q = $("#search").value.trim().toLowerCase();
+  const list = videos.filter(v => (filter === "all" || v.category === filter || (filter === "draft" && v.status === "draft") || (filter === "yt" && v.source === "youtube"))
+    && (!q || (v.title + " " + (v.ref || "") + " " + (v.kind || "")).toLowerCase().includes(q)));
+  const catName = id => (cats.find(k => k.id === id) || {}).name || "No category";
+  $("#videoList").innerHTML = list.length ? list.map(v => `
+    <button class="vcard" data-id="${esc(v.id)}">
+      ${v.thumbnail ? `<img src="${esc(v.thumbnail)}" alt="" loading="lazy">` : `<span class="ph"></span>`}
+      <span style="min-width:0"><h3>${esc(v.title)}</h3><span class="sub">${esc(catName(v.category))}${v.ref ? " · " + esc(v.ref) : ""}</span><span class="tags">${tagsFor(v)}</span></span>
+    </button>`).join("") : `<div class="empty">No videos here yet.</div>`;
+  $("#videoList").querySelectorAll(".vcard").forEach(b => b.onclick = () => openEditor(videos.find(v => v.id === b.dataset.id)));
+}
+$("#search").oninput = renderVideos;
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  $("#tab-videos").hidden = b.dataset.tab !== "videos"; $("#tab-cats").hidden = b.dataset.tab !== "cats";
+  $("#newVideo").hidden = b.dataset.tab !== "videos";
+});
+
+/* ---------- editor ---------- */
+function ytId(text) {
+  const m = String(text).trim().match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([A-Za-z0-9_-]{11})/) || String(text).trim().match(/^([A-Za-z0-9_-]{11})$/);
+  return m ? m[1] : null;
+}
+function setThumb(url) { $("#edThumb").innerHTML = url ? `<img src="${esc(url)}" alt="Thumbnail">` : `<span class="ph"></span>`; }
+function sourceText(v) {
+  if (!v) return "Save the details, then upload the video file.";
+  if (v.source === "hls" && v.processing === "ready") return `Stored on your own storage${v.duration ? ` · ${Math.floor(v.duration / 60)} min ${v.duration % 60} s` : ""}.`;
+  if (v.processing === "failed") return v.processingError || "The last conversion failed. Try uploading again.";
+  if (v.source === "youtube") return "Currently playing from YouTube. Upload the original file to move it to your own storage.";
+  return "No video yet. Upload the video file.";
+}
+function openEditor(v) {
+  current = v || null; clearInterval(polling);
+  $("#edTitle").textContent = v ? v.title : "New video";
+  $("#edT").value = v ? v.title : ""; $("#edCat").value = v ? v.category || "" : (filter in { all: 1, draft: 1, yt: 1 } ? "" : filter);
+  $("#edRef").value = v?.ref || ""; $("#edKind").value = v?.kind || ""; $("#edAge").value = v?.age || ""; $("#edDesc").value = v?.description || "";
+  const talk = v?.talk || [];
+  $("#edTalk").innerHTML = [0, 1, 2].map(i => `<input type="text" class="talkq" maxlength="160" placeholder="Question ${i + 1}" aria-label="Question ${i + 1}" value="${esc(talk[i] || "")}">`).join("");
+  $("#edPub").checked = v?.status === "published"; $("#edFeat").checked = !!v?.featured; $("#edBed").checked = !!v?.bedtime;
+  $("#edShort").checked = !!v?.short; $("#edPar").checked = !!v?.parents;
+  $("#edYt").value = v?.youtubeId ? "https://youtu.be/" + v.youtubeId : "";
+  $("#edYtBox").hidden = v?.source === "hls";
+  setThumb(v?.thumbnail); $("#edSource").textContent = sourceText(v);
+  $("#edDanger").hidden = !v; $("#edMsg").textContent = ""; $("#edMsg").className = "msg";
+  $("#edSteps").hidden = true;
+  $("#editor").hidden = false; $("#editor").scrollTop = 0; document.body.style.overflow = "hidden";
+  if (v && (v.processing === "converting" || v.processing === "uploading")) { showSteps(v.processing === "converting" ? "convert" : "upload"); if (v.processing === "converting") poll(); }
+  setTimeout(() => (v ? $("#edClose") : $("#edT")).focus(), 50);
+}
+function closeEditor() { clearInterval(polling); $("#editor").hidden = true; document.body.style.overflow = ""; loadVideos(); loadStats(); }
+$("#edClose").onclick = closeEditor;
+$("#newVideo").onclick = () => openEditor(null);
+
+function formData() {
+  return {
+    title: $("#edT").value.trim(), category: $("#edCat").value || null, ref: $("#edRef").value.trim(), kind: $("#edKind").value.trim(), age: $("#edAge").value.trim(),
+    description: $("#edDesc").value.trim(), talk: [...document.querySelectorAll(".talkq")].map(i => i.value.trim()).filter(Boolean),
+    featured: $("#edFeat").checked, bedtime: $("#edBed").checked, short: $("#edShort").checked, parents: $("#edPar").checked,
+    status: $("#edPub").checked ? "published" : "draft",
+  };
+}
+async function save(quiet) {
+  const d = formData();
+  if (!d.title) { $("#edMsg").textContent = "Give the video a title."; $("#edT").focus(); return false; }
+  const yt = $("#edYt").value.trim();
+  if (yt && !ytId(yt)) { $("#edMsg").textContent = "That YouTube link doesn't look right. Copy it from YouTube's Share button."; return false; }
+  if (yt) d.youtubeId = ytId(yt); else if (current?.source === "youtube") d.youtubeId = "";
+  $("#edSave").disabled = true; $("#edMsg").className = "msg"; $("#edMsg").textContent = "";
+  try {
+    if (!current) { const { status, ...first } = d; current = await api("/api/admin/videos", { method: "POST", body: JSON.stringify(first) }); if (status === "published") current = await api(`/api/admin/videos/${current.id}`, { method: "PUT", body: JSON.stringify({ status }) }); }
+    else current = await api(`/api/admin/videos/${current.id}`, { method: "PUT", body: JSON.stringify(d) });
+    $("#edTitle").textContent = current.title; $("#edDanger").hidden = false; setThumb(current.thumbnail); $("#edSource").textContent = sourceText(current);
+    if (!quiet) { $("#edMsg").className = "msg ok"; $("#edMsg").textContent = current.status === "published" ? "Saved. It's live in the app." : "Saved as a draft."; }
+    return true;
+  } catch (err) { $("#edMsg").textContent = err.message; if (/publish/i.test(err.message)) $("#edPub").checked = false; return false; }
+  finally { $("#edSave").disabled = false; }
+}
+$("#edForm").onsubmit = e => { e.preventDefault(); save(); };
+
+/* upload → convert → ready */
+function showSteps(stage, failed) {
+  $("#edSteps").hidden = false;
+  const order = ["upload", "convert", "ready"], at = order.indexOf(stage);
+  document.querySelectorAll("#edSteps .step").forEach(s => {
+    const i = order.indexOf(s.dataset.s);
+    s.className = "step" + (failed && i === at ? " err" : i < at || stage === "ready" ? " done" : i === at ? " on" : "");
+    s.querySelector("i").textContent = s.classList.contains("done") ? "✓" : s.classList.contains("err") ? "!" : "";
+  });
+  $("#edBar").hidden = stage !== "upload";
+}
+$("#edFile").onchange = async () => {
+  const file = $("#edFile").files[0]; $("#edFile").value = "";
+  if (!file) return;
+  if (!current && !(await save(true))) return;
+  showSteps("upload"); $("#edFileBtn").hidden = true; $("#edMsg").textContent = "";
+  try {
+    const { uploadUrl } = await api(`/api/admin/videos/${current.id}/upload`, { method: "POST", body: JSON.stringify({ filename: file.name, size: file.size }) });
+    await new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest(); x.open("PUT", uploadUrl);
+      x.setRequestHeader("Content-Type", file.type || "video/mp4");
+      x.upload.onprogress = e => { if (e.lengthComputable) { const p = Math.round(e.loaded / e.total * 100); $("#edPct").textContent = p + "%"; $("#edBar i").style.width = p + "%"; } };
+      x.onload = () => x.status < 300 ? resolve() : reject(new Error("The upload was interrupted. Check your connection and try again."));
+      x.onerror = () => reject(new Error("The upload was interrupted. Check your connection and try again."));
+      x.send(file);
+    });
+    await api(`/api/admin/videos/${current.id}/convert`, { method: "POST" });
+    showSteps("convert"); $("#edMsg").className = "msg ok"; $("#edMsg").textContent = "Uploaded. You can leave this page; converting continues on its own.";
+    poll();
+  } catch (err) { showSteps("upload", true); $("#edMsg").className = "msg"; $("#edMsg").textContent = err.message; }
+  $("#edFileBtn").hidden = false;
+};
+function poll() {
+  clearInterval(polling);
+  polling = setInterval(async () => {
+    if (!current) return clearInterval(polling);
+    try {
+      const v = await api(`/api/admin/videos/${current.id}`);
+      if (v.processing === "ready") { clearInterval(polling); current = v; showSteps("ready"); setThumb(v.thumbnail); $("#edSource").textContent = sourceText(v); $("#edYtBox").hidden = true; $("#edMsg").className = "msg ok"; $("#edMsg").textContent = v.status === "published" ? "Ready. The new version is live in the app." : "Ready. Turn on Published and save to put it in the app."; }
+      if (v.processing === "failed") { clearInterval(polling); current = v; showSteps("convert", true); $("#edMsg").className = "msg"; $("#edMsg").textContent = v.processingError || "Conversion failed. Try uploading again."; }
+    } catch (e) {}
+  }, 4000);
+}
+$("#edImg").onchange = async () => {
+  const f = $("#edImg").files[0]; $("#edImg").value = "";
+  if (!f) return;
+  if (!current && !(await save(true))) return;
+  try { current = await api(`/api/admin/videos/${current.id}/thumbnail`, { method: "POST", body: f, headers: { "Content-Type": f.type } }); setThumb(current.thumbnail); toast("Thumbnail updated"); }
+  catch (err) { $("#edMsg").textContent = err.message; }
+};
+let delArmed = false;
+$("#edDel").onclick = async () => {
+  if (!delArmed) { delArmed = true; $("#edDel").textContent = "Tap again to delete for good"; setTimeout(() => { delArmed = false; $("#edDel").textContent = "Delete this video"; }, 4000); return; }
+  try { await api(`/api/admin/videos/${current.id}`, { method: "DELETE" }); toast("Video deleted"); closeEditor(); } catch (err) { $("#edMsg").textContent = err.message; }
+};
+
+/* ---------- categories ---------- */
+function renderCats() {
+  $("#catList").innerHTML = cats.map((k, i) => `
+    <div class="ccard" data-id="${esc(k.id)}">
+      <div class="top"><h3>${esc(k.name)}</h3><span class="sub">${k.count} video${k.count === 1 ? "" : "s"}</span></div>
+      <div class="row2">
+        <label class="f">Name<input type="text" class="cn" value="${esc(k.name)}" maxlength="40"></label>
+        <label class="f">Line under the title<input type="text" class="cnote" value="${esc(k.note || "")}" maxlength="80"></label>
+      </div>
+      <label class="tg"><span><b>Big tile on the home screen</b><small>Also show as a large picture tile.</small></span><input type="checkbox" class="cworld" ${k.world ? "checked" : ""}></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost cup" ${i === 0 ? "disabled" : ""}>↑ Move up</button>
+        <button class="btn ghost cdown" ${i === cats.length - 1 ? "disabled" : ""}>↓ Move down</button>
+        <button class="btn csave">Save</button>
+        <button class="btn danger cdel">Delete</button>
+      </div>
+    </div>`).join("");
+  $("#catList").querySelectorAll(".ccard").forEach(card => {
+    const id = card.dataset.id, i = cats.findIndex(k => k.id === id);
+    card.querySelector(".csave").onclick = async () => { try { await api(`/api/admin/categories/${id}`, { method: "PUT", body: JSON.stringify({ name: card.querySelector(".cn").value.trim(), note: card.querySelector(".cnote").value.trim(), world: card.querySelector(".cworld").checked }) }); toast("Category saved"); loadCats(); } catch (err) { toast(err.message); } };
+    card.querySelector(".cdel").onclick = async () => { try { await api(`/api/admin/categories/${id}`, { method: "DELETE" }); toast("Category deleted"); loadCats(); } catch (err) { toast(err.message); } };
+    const move = async d => { const other = cats[i + d]; await api(`/api/admin/categories/${id}`, { method: "PUT", body: JSON.stringify({ sort: other.sort }) }); await api(`/api/admin/categories/${other.id}`, { method: "PUT", body: JSON.stringify({ sort: cats[i].sort }) }); loadCats(); };
+    card.querySelector(".cup").onclick = () => move(-1); card.querySelector(".cdown").onclick = () => move(1);
+  });
+}
+$("#addCat").onclick = async () => {
+  try { await api("/api/admin/categories", { method: "POST", body: JSON.stringify({ name: "New category" }) }); toast("Category added. Rename it below."); loadCats(); } catch (err) { toast(err.message); }
+};
+
+start();
+</script>
+</body>
+</html>

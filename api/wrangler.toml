@@ -1,0 +1,41 @@
+name = "littleroots-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# The Admin page (/admin) is served from ./public
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Database. After `wrangler d1 create littleroots`, paste the id it prints here.
+[[d1_databases]]
+binding = "DB"
+database_name = "littleroots"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# Video + thumbnail storage (free tier: 10 GB). Create with `wrangler r2 bucket create littleroots-media`.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "littleroots-media"
+
+[vars]
+# Public web address of this backend (used in links)
+PUBLIC_URL = "http://localhost:8787"
+# Public address of the R2 bucket (custom domain or r2.dev), where streaming files are read from
+MEDIA_PUBLIC_URL = "http://localhost:8787/media"
+# Only these emails can create an Admin account (comma-separated)
+ADMIN_EMAILS = "olusholaoluyomi@gmail.com"
+# Cloudflare account id (for direct uploads to R2)
+R2_ACCOUNT_ID = ""
+R2_BUCKET = "littleroots-media"
+# GitHub repository that runs the free video converter (GitHub Actions)
+CONVERTER_REPO = "littlerootsstudios-ops/Littleroot-tv-app"
+# "1" = simulate R2 uploads and the converter (local testing only). Must be "0" in production.
+MOCK_EXTERNAL = "1"
+
+# Secrets (never written in this file). Set each with `wrangler secret put NAME`:
+#   R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY  - R2 API token (Object Read & Write) for direct uploads
+#   GITHUB_TOKEN                            - fine-grained token with "Actions: write" on CONVERTER_REPO
+#   CONVERTER_SECRET                        - any long random text; also saved as a GitHub Actions secret
