@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: api/package-lock.json
 
@@ -59,19 +59,28 @@ jobs:
           npx wrangler deploy 2>&1 | tee deploy.log
           url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Backend address::$url"
 
       - name: Pass the keys to the backend
         env:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           CONVERTER_SECRET: ${{ secrets.CONVERTER_SECRET }}
-          CONVERTER_GITHUB_TOKEN: ${{ secrets.CONVERTER_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONVERTER_GITHUB_TOKEN }}
         run: |
-          umask 077
-          jq -n --arg a "$R2_ACCESS_KEY_ID" --arg b "$R2_SECRET_ACCESS_KEY" --arg c "$CONVERTER_SECRET" --arg d "$CONVERTER_GITHUB_TOKEN" \
-            '{R2_ACCESS_KEY_ID:$a, R2_SECRET_ACCESS_KEY:$b, CONVERTER_SECRET:$c, GITHUB_TOKEN:$d}' > "$RUNNER_TEMP/secrets.json"
-          npx wrangler secret bulk "$RUNNER_TEMP/secrets.json"
-          rm -f "$RUNNER_TEMP/secrets.json"
+          failed=0
+          for n in R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY CONVERTER_SECRET GITHUB_TOKEN; do
+            if printf '%s' "${!n}" | npx wrangler secret put "$n" > "$RUNNER_TEMP/out.txt" 2>&1; then
+              echo "Saved $n"
+            else
+              failed=1
+              # report wrangler's own message (it never prints the secret value)
+              msg=$(grep -vE '^\s*$' "$RUNNER_TEMP/out.txt" | tail -n 6 | tr '\n' ' ' | cut -c1-600)
+              echo "::error title=Couldn't save $n::$msg"
+            fi
+          done
+          rm -f "$RUNNER_TEMP/out.txt"
+          exit $failed
 
       - name: Check it's live
         env:
@@ -81,6 +90,7 @@ jobs:
           for i in $(seq 1 12); do curl -fsS "$URL/api/health" && break; sleep 5; done
           videos=$(curl -fsS "$URL/api/catalog" | jq '.videos | length')
           echo "Videos in the catalog: $videos"
+          echo "::notice title=Live::Admin page $URL/admin/ · catalog has $videos videos"
           {
             echo "## LittleRoots backend is live"
             echo ""
