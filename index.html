@@ -2153,8 +2153,13 @@ function closeLayer() {
 const BACK = [8, 27, 461, 10009]; // Backspace (VIDAA), Escape, LG webOS Back, Tizen Back
 // Installed as a TV app (LG package runs from file://, the Hisense app opens the address with ?tvapp=1)
 const IS_TV_APP = location.protocol === "file:" || /[?&]tvapp=1/.test(location.search) || !!window.PalmSystem;
+// Android app on a phone/tablet (no remote): Back twice anywhere on the home screen leaves the app
+const IS_TOUCH_APP = /[?&]touch=1/.test(location.search);
 let exitAsk = 0;
 function exitApp() {
+  try {
+    if (window.LRAndroid) return LRAndroid.exit();
+  } catch (e) {}
   try {
     if (window.webOS && webOS.platformBack) return webOS.platformBack();
   } catch (e) {}
@@ -2189,17 +2194,34 @@ document.addEventListener("keydown", e => {
   }
   if (BACK.includes(e.keyCode)) {
     e.preventDefault();
-    if (topLayer() !== document.body) return closeLayer();
-    const home = $("#nav button");
-    if (IS_TV_APP && document.activeElement === home) {
-      // installed TV app: Back twice on Home leaves the app
-      if (Date.now() - (exitAsk || 0) < 3000) return exitApp();
-      exitAsk = Date.now();
-      return toast("Press Back again to leave LittleRoots");
-    }
-    return setFocus(home);
+    goBack();
   }
 });
+// One Back press. Also called by the Android app for its Back button.
+function goBack() {
+  if (!$("#player").hidden) {
+    endPlayback(!!(P && P.finished));
+    return true;
+  }
+  if (topLayer() !== document.body) {
+    closeLayer();
+    return true;
+  }
+  const home = $("#nav button");
+  if (IS_TV_APP && (IS_TOUCH_APP || document.activeElement === home)) {
+    // installed app: Back twice on Home leaves the app
+    if (Date.now() - (exitAsk || 0) < 3000) {
+      exitApp();
+      return true;
+    }
+    exitAsk = Date.now();
+    toast("Press Back again to leave LittleRoots");
+    return true;
+  }
+  setFocus(home);
+  return true;
+}
+window.lrBack = goBack;
 document.addEventListener("focusin", e => {
   if (topLayer() === document.body && e.target.closest("#browse, .top")) lastBrowseFocus = e.target;
 });

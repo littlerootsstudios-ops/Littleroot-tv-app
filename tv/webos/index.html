@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LittleRoots</title>
+<style>
+html,body{margin:0;height:100%;background:#0D322C;color:#F3EBD8;font-family:sans-serif}
+body{display:flex;align-items:center;justify-content:center;text-align:center;font-size:34px;line-height:1.5}
+small{display:block;color:#E7C27F;font-size:26px;margin-top:16px}
+</style>
+</head>
+<body>
+<div id="msg"></div>
+<script>
+// LittleRoots for LG: opens the live LittleRoots TV app (always the newest version and library).
+var APP = "https://littleroots-api.littlerootsstudios.workers.dev/?tvapp=1&platform=webos";
+function go() {
+  if (navigator.onLine === false) {
+    document.getElementById("msg").innerHTML = "LittleRoots needs the internet.<small>Check the TV is connected, then press OK.</small>";
+    return;
+  }
+  location.replace(APP);
+}
+document.addEventListener("keydown", function (e) {
+  if (e.keyCode === 13) go();
+  if (e.keyCode === 461) { try { if (window.PalmSystem && PalmSystem.platformBack) return PalmSystem.platformBack(); } catch (x) {} window.close(); }
+});
+window.addEventListener("online", go);
+go();
+</script>
+</body>
+</html>

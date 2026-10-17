@@ -1,0 +1,30 @@
+plugins { id "com.android.application" }
+
+android {
+    namespace "com.littleroots.app"
+    compileSdk 35
+    defaultConfig {
+        applicationId "com.littleroots.app"
+        minSdk 24          // Android 7 and newer (phones, tablets, Android TV / Google TV)
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+    signingConfigs {
+        // Test key for installing the APK directly. The Play Store version will use a private key kept out of this repository.
+        test {
+            storeFile file("littleroots-test.jks")
+            storePassword "littleroots-test"
+            keyAlias "littleroots"
+            keyPassword "littleroots-test"
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.test
+        }
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
