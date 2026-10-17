@@ -1,0 +1,7 @@
+# Always check for the newest version of the app pages (they are small)
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/admin/*
+  Cache-Control: no-cache
