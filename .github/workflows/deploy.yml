@@ -1,5 +1,5 @@
 # Publishes the LittleRoots backend + Admin page to Cloudflare.
-# Runs on every push that changes api/, or by hand (Actions -> Deploy backend -> Run workflow).
+# Runs on every push that changes api/ or this file, or by hand (Actions -> Deploy backend -> Run workflow).
 #
 # Repository secrets needed (Settings -> Secrets and variables -> Actions):
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
