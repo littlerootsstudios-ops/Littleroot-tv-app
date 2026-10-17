@@ -26,7 +26,7 @@ PUBLIC_URL = ""
 # Public address of the R2 bucket (custom domain or r2.dev), where streaming files are read from
 MEDIA_PUBLIC_URL = "https://pub-f4b1b52ec26f4123920d56cfef810edc.r2.dev"
 # Only these emails can create an Admin account (comma-separated)
-ADMIN_EMAILS = "olusholaoluyomi@gmail.com"
+ADMIN_EMAILS = "olusholaoluyomi@gmail.com,littlerootsstudios@gmail.com,ogunrooriyomi@gmail.com"
 # Cloudflare account id (for direct uploads to R2)
 R2_ACCOUNT_ID = "0e6af6e384c3d1a18b5ce0cfa04b3735"
 R2_BUCKET = "littleroots-media"
