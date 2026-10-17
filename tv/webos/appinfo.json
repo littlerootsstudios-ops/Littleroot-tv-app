@@ -1,0 +1,18 @@
+{
+  "id": "com.littleroots.tv",
+  "version": "1.0.0",
+  "vendor": "LittleRoots Studios",
+  "type": "web",
+  "main": "index.html",
+  "title": "LittleRoots",
+  "appDescription": "Christian stories and songs for kids and family",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "splashBackground": "splash.png",
+  "bgColor": "#0D322C",
+  "iconColor": "#0D322C",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "transparent": false,
+  "requiredACG": []
+}
