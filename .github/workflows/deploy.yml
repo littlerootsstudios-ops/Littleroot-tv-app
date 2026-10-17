@@ -56,7 +56,13 @@ jobs:
       - name: Publish
         id: deploy
         run: |
-          npx wrangler deploy 2>&1 | tee deploy.log
+          if ! npx wrangler deploy > deploy.log 2>&1; then
+            cat deploy.log
+            msg=$(grep -vE '^\s*$|wrangler@4|npx wrangler|Update available|─' deploy.log | tail -n 8 | tr '\n' ' ' | sed 's/\x1b\[[0-9;]*m//g' | cut -c1-900)
+            echo "::error title=Publish failed::$msg"
+            exit 1
+          fi
+          cat deploy.log
           url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "::notice title=Backend address::$url"
@@ -75,7 +81,7 @@ jobs:
             else
               failed=1
               # report wrangler's own message (it never prints the secret value)
-              msg=$(grep -vE '^\s*$' "$RUNNER_TEMP/out.txt" | tail -n 6 | tr '\n' ' ' | cut -c1-600)
+              msg=$(grep -vE '^\s*$|wrangler@4|npx wrangler' "$RUNNER_TEMP/out.txt" | tail -n 6 | tr '\n' ' ' | sed 's/\x1b\[[0-9;]*m//g' | cut -c1-600)
               echo "::error title=Couldn't save $n::$msg"
             fi
           done
