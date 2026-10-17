@@ -16,7 +16,7 @@ TV / phone apps ◀── /api/catalog ── this backend
 cd api
 npm install
 npx wrangler d1 migrations apply littleroots --local   # creates the database with the 30 videos
-echo 'CONVERTER_SECRET="local-test-secret"' > .dev.vars
+printf 'CONVERTER_SECRET="local-test-secret"\nMOCK_EXTERNAL="1"\nMEDIA_PUBLIC_URL="http://localhost:8787/media"\n' > .dev.vars
 npx wrangler dev                                        # open http://localhost:8787/admin
 npm test                                                # in a second terminal
 ```

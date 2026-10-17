@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { AwsClient } from "aws4fetch";
-import { type Env, type Vars, type C, err, requireAdmin, randomToken, slugify, safeEqual, mock } from "./lib";
+import { type Env, type Vars, type C, err, requireAdmin, randomToken, slugify, safeEqual, mock, publicUrl } from "./lib";
 
 export const admin = new Hono<{ Bindings: Env; Variables: Vars }>();
 admin.use("*", requireAdmin);
@@ -165,7 +165,7 @@ admin.post("/videos/:id/upload", async c => {
   const key = `inbox/${v.id}/${randomToken(8)}.${ext}`;
   if (v.upload_key) await c.env.MEDIA.delete(v.upload_key);
   await c.env.DB.prepare("UPDATE videos SET upload_key = ?, processing = 'uploading', processing_error = NULL, updated_at = datetime('now') WHERE id = ?").bind(key, v.id).run();
-  if (mock(c.env)) return c.json({ uploadUrl: `${c.env.PUBLIC_URL}/api/mock-upload/${encodeURIComponent(key)}`, method: "PUT", key, mock: true });
+  if (mock(c.env)) return c.json({ uploadUrl: `${publicUrl(c)}/api/mock-upload/${encodeURIComponent(key)}`, method: "PUT", key, mock: true });
   if (!c.env.R2_ACCESS_KEY_ID || !c.env.R2_SECRET_ACCESS_KEY || !c.env.R2_ACCOUNT_ID) return err(c, 500, "storage_not_set_up", "Storage keys aren't set up yet (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY).");
   const aws = new AwsClient({ accessKeyId: c.env.R2_ACCESS_KEY_ID, secretAccessKey: c.env.R2_SECRET_ACCESS_KEY, service: "s3", region: "auto" });
   const url = new URL(`https://${c.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${c.env.R2_BUCKET}/${key}`);
@@ -184,7 +184,7 @@ admin.post("/videos/:id/convert", async c => {
     const r = await fetch(`https://api.github.com/repos/${c.env.CONVERTER_REPO}/actions/workflows/convert.yml/dispatches`, {
       method: "POST",
       headers: { Authorization: `Bearer ${c.env.GITHUB_TOKEN}`, Accept: "application/vnd.github+json", "User-Agent": "littleroots-api", "Content-Type": "application/json" },
-      body: JSON.stringify({ ref: "main", inputs: { video_id: v.id, input_key: v.upload_key, output_prefix: prefix, callback_url: `${c.env.PUBLIC_URL}/api/converter/callback` } }),
+      body: JSON.stringify({ ref: "main", inputs: { video_id: v.id, input_key: v.upload_key, output_prefix: prefix, callback_url: `${publicUrl(c)}/api/converter/callback` } }),
     });
     if (r.status !== 204) { console.error("GitHub dispatch failed", r.status, await r.text()); return err(c, 502, "converter_unavailable", "Couldn't start the converter. Try again in a minute."); }
   } else {

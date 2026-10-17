@@ -22,6 +22,8 @@ export type Vars = { user: User | null; tokenHash: string | null };
 export type C = Context<{ Bindings: Env; Variables: Vars }>;
 
 export const mock = (env: Env) => env.MOCK_EXTERNAL === "1";
+/** This backend's own web address: PUBLIC_URL if set, otherwise the address it was reached at. */
+export const publicUrl = (c: C) => (c.env.PUBLIC_URL || new URL(c.req.url).origin).replace(/\/+$/, "");
 
 /* ---------- small helpers ---------- */
 const enc = new TextEncoder();
