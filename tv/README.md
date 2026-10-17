@@ -5,7 +5,7 @@ The TV app is one web app (`src/littleroots-tv.html`). It is delivered three way
 | Where | How | Updates |
 |---|---|---|
 | **LG (webOS)** | Installed package `com.littleroots.tv_<version>_all.ipk`, built by `bash tools/package-lg.sh` (or the *Build LG TV app* workflow). It opens the live app with `?tvapp=1&platform=webos` (YouTube only plays embedded videos for apps that come from a web address). | Everything updates instantly. Rebuild only for a new icon/name (raise `version` in `tv/webos/appinfo.json`). |
-| **Android phones, tablets, Android TV / Google TV** | `android/` - a small native app that shows the live app full screen (`?tvapp=1&platform=android`, plus `&touch=1` on phones). Built by the *Build Android app* workflow; the APK is saved on the `apk` branch. | Everything updates instantly. |
+| **Phones, tablets, Android app** | Repo `littlerootsstudios-ops/littleroots-mobile-app`. Phones that open the main address are sent to the touch app at `/m/`, which the backend builds from that repo (the commit named in `mobile-app.ref`). | Change `mobile-app.ref` to publish a new phone version. |
 | **Hisense (VIDAA)** | Hosted web app: VIDAA opens `https://littleroots-api.littlerootsstudios.workers.dev/?tvapp=1` | Everything updates instantly. |
 | **Any TV browser / phone** | `https://littleroots-api.littlerootsstudios.workers.dev/` | Instantly. |
 

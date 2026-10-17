@@ -100,6 +100,7 @@ html = html.replace(/<title>[^<]*<\/title>\s*/, "").replace(/<meta name="claude:
 const flexGapTest = `<script>(function(){var d=document.createElement("div");d.style.display="flex";d.style.flexDirection="column";d.style.rowGap="1px";d.appendChild(document.createElement("div"));d.appendChild(document.createElement("div"));document.documentElement.appendChild(d);var ok=d.scrollHeight===1;d.parentNode.removeChild(d);if(!ok)document.documentElement.className+=" no-flexgap";})();</script>`;
 const headBits = [];
 html = html.replace(/<link[^>]*>\s*/g, m => { headBits.push(m.trim()); return ""; });
+html = html.replace(/<meta [^>]*>\s*/g, m => { headBits.push(m.trim()); return ""; });
 const styleBlock = html.match(styleRe)[0]; html = html.replace(styleRe, "");
 const page = `<!doctype html>
 <html lang="en">

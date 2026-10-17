@@ -9,7 +9,7 @@ name: Deploy backend
 on:
   push:
     branches: [main]
-    paths: ["api/**", "src/**", "tools/build-tv.mjs", ".github/workflows/deploy.yml"]
+    paths: ["api/**", "src/**", "tools/build-tv.mjs", "mobile-app.ref", ".github/workflows/deploy.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -28,6 +28,18 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Which version of the phone app to publish
+        id: mobile
+        working-directory: .
+        run: echo "ref=$(tr -d '[:space:]' < mobile-app.ref)" >> "$GITHUB_OUTPUT"
+
+      - name: Get the phone app (littleroots-mobile-app repo)
+        uses: actions/checkout@v4
+        with:
+          repository: littlerootsstudios-ops/littleroots-mobile-app
+          ref: ${{ steps.mobile.outputs.ref }}
+          path: mobile
 
       - uses: actions/setup-node@v4
         with:
@@ -50,8 +62,12 @@ jobs:
 
       - run: npm ci
 
-      - name: Build the TV app (works on older TV browsers too)
-        run: node ../tools/build-tv.mjs ../src/littleroots-tv.html public/index.html ./node_modules
+      - name: Build the TV app and the phone app (work on older browsers too)
+        run: |
+          node ../tools/build-tv.mjs ../src/littleroots-tv.html public/index.html ./node_modules
+          mkdir -p public/m
+          node ../tools/build-tv.mjs ../mobile/web/littleroots-mobile.html public/m/index.html ./node_modules
+          cp ../mobile/web/manifest.webmanifest ../mobile/web/icon-*.png public/m/
 
       - name: Create tables and load the videos (only new changes are applied)
         run: npx wrangler d1 migrations apply littleroots --remote
@@ -100,7 +116,8 @@ jobs:
           videos=$(curl -fsS "$URL/api/catalog" | jq '.videos | length')
           echo "Videos in the catalog: $videos"
           curl -fsS "$URL/" | grep -q "LittleRoots" || { echo "::error::The TV app page didn't load"; exit 1; }
-          echo "::notice title=Live::TV app $URL/ · Admin page $URL/admin/ · catalog has $videos videos"
+          curl -fsS "$URL/m/" | grep -q "Little Moments" || { echo "::error::The phone app page didn't load"; exit 1; }
+          echo "::notice title=Live::TV app $URL/ · Phone app $URL/m/ · Admin page $URL/admin/ · catalog has $videos videos"
           {
             echo "## LittleRoots backend is live"
             echo ""

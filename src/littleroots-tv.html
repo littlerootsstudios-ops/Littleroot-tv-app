@@ -228,6 +228,18 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 @media (prefers-reduced-motion: reduce) { .fx, .p-ui { transition: none; } .player canvas.kb { animation: none; } }
 </style>
+<script>
+/* Phones and tablets get the touch app (/m/). TVs, the installed TV apps and ?tv=1 stay here. */
+(function () {
+  try {
+    var q = location.search;
+    if (/[?&](tv|tvapp)=1/.test(q) || window.PalmSystem || !/^https?:$/.test(location.protocol)) return;
+    if (!/\.workers\.dev$|^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+    var touch = (navigator.maxTouchPoints || 0) > 0 && window.matchMedia && matchMedia("(pointer: coarse)").matches && !matchMedia("(pointer: fine)").matches;
+    if (touch) location.replace(location.pathname.replace(/\/?$/, "/") + "m/" + q);
+  } catch (e) {}
+})();
+</script>
 
 <header class="top wrap">
   <svg class="logo" viewBox="132 292 310 222" role="img" aria-label="LittleRoots">

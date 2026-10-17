@@ -15,11 +15,7 @@ const svg = fs.readFileSync(path.join(ROOT, "brand/littleroots-logo.svg"), "utf8
   .replace(/\.st0\{fill:#0D322C;\}/, ".st0{fill:#F3EBD8;}");
 
 // [file, width, height, logo width as share of canvas, tagline?, jpg?, transparent?]
-const RES = "android/app/src/main/res";
 const OUT = [
-  ...[["mdpi", 48], ["hdpi", 72], ["xhdpi", 96], ["xxhdpi", 144], ["xxxhdpi", 192]].map(([d, s]) => [`${RES}/mipmap-${d}/ic_launcher.png`, s, s, 0.84]),
-  ...[["mdpi", 108], ["hdpi", 162], ["xhdpi", 216], ["xxhdpi", 324], ["xxxhdpi", 432]].map(([d, s]) => [`${RES}/mipmap-${d}/ic_launcher_foreground.png`, s, s, 0.56, false, false, true]),
-  [`${RES}/drawable-xhdpi/banner.png`, 640, 360, 0.5],
   ["tv/webos/icon.png", 80, 80, 0.86],
   ["tv/webos/largeIcon.png", 130, 130, 0.84],
   ["tv/webos/splash.png", 1920, 1080, 0.36, true],

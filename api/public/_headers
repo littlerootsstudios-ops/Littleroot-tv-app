@@ -5,3 +5,5 @@
   Cache-Control: no-cache
 /admin/*
   Cache-Control: no-cache
+/m/*
+  Cache-Control: no-cache
