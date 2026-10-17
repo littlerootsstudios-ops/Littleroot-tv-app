@@ -4,9 +4,10 @@
 //         (LG webOS 5+ / Chromium 68+, Hisense VIDAA with similar engines).
 // Usage:  node build-tv.mjs <source.html> <out.html> <path-to-node_modules>
 import fs from "fs";
+import path from "path";
 import { createRequire } from "module";
 const [, , SRC, OUT, NM] = process.argv;
-const require = createRequire(NM + "/");
+const require = createRequire(path.resolve(NM) + "/");
 const babel = require("@babel/core");
 
 let html = fs.readFileSync(SRC, "utf8");

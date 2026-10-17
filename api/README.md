@@ -1,6 +1,6 @@
 # LittleRoots backend + Admin page
 
-Runs on Cloudflare Workers (free plan). It holds the video library, serves the catalog to the TV and phone apps,
+Runs on Cloudflare Workers (free plan). It holds the video library, serves the TV app at `/` and its catalog,
 and powers the Admin page at `/admin`. Videos are stored in Cloudflare R2 (free up to 10 GB) and converted for
 TVs and phones by a free GitHub Actions workflow (`.github/workflows/convert.yml`).
 
@@ -17,7 +17,8 @@ cd api
 npm install
 npx wrangler d1 migrations apply littleroots --local   # creates the database with the 30 videos
 printf 'CONVERTER_SECRET="local-test-secret"\nMOCK_EXTERNAL="1"\nMEDIA_PUBLIC_URL="http://localhost:8787/media"\n' > .dev.vars
-npx wrangler dev                                        # open http://localhost:8787/admin
+node ../tools/build-tv.mjs ../src/littleroots-tv.html public/index.html ./node_modules   # builds the TV app
+npx wrangler dev                                        # TV app: http://localhost:8787/  Admin: /admin
 npm test                                                # in a second terminal
 ```
 Locally, uploads and conversion are simulated (`MOCK_EXTERNAL = "1"`).

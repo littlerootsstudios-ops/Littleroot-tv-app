@@ -2,8 +2,10 @@
 
 | Folder | What it is |
 |---|---|
-| `index.html`, `src/` | The TV and phone app (currently plays from YouTube) |
+| `src/littleroots-tv.html` | The TV and phone app (source). It loads its library from the backend; built automatically into `api/public/index.html` and served at the backend's address |
+| `index.html` | TV-safe build of the app for GitHub Pages (same app, loads the same library) |
 | `api/` | Backend + Admin page: video library, uploads, catalog for the apps. See `api/README.md` |
+| `.github/workflows/deploy.yml` | Publishes the backend, TV app and Admin page to Cloudflare on every push |
 | `.github/workflows/convert.yml` | Free video converter (runs on GitHub after each Admin upload) |
 | `tools/` | Conversion script, TV-safe build, seed generator |
 | `brand/` | Logo and sound logo |
@@ -26,3 +28,7 @@ npm i @babel/core@7.24.7 @babel/preset-env@7.24.7
 node tools/build-tv.mjs src/littleroots-tv.html index.html ./node_modules
 ```
 The build adds the full page header, converts newer JavaScript to an older form, and adds layout fallbacks for older TV browsers.
+
+## Live addresses
+- TV app: https://littleroots-api.littlerootsstudios.workers.dev/
+- Admin page: https://littleroots-api.littlerootsstudios.workers.dev/admin/

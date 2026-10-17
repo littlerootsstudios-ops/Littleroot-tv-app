@@ -114,6 +114,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .player { position: fixed; inset: 0; z-index: 60; background: #000; color: var(--parchment); display: grid; }
 .yt-frame { position: absolute; inset: 0; overflow: hidden; background: #000; }
 .yt-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.yt-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; pointer-events: none; }
 .p-shield { position: absolute; inset: 0; z-index: 1; }
 .p-pause { position: absolute; inset: 0; z-index: 2; display: grid; align-content: center; gap: .5rem; padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)); background: rgba(0,0,0,.72); opacity: 0; pointer-events: none; transition: opacity .3s; }
 .player.paused .p-pause { opacity: 1; }
@@ -276,23 +277,25 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
 <script>
 /* =================================================================
-   CONFIG — the only part you edit to go live
-   VIDEO_BASE_URL: your Cloudflare R2 public address, e.g.
-     "https://videos.littleroots.tv"
-   Leave it empty to run in demo mode (illustrated playback).
-   Each episode streams from  VIDEO_BASE_URL/<slug>/master.m3u8
-   and uses              VIDEO_BASE_URL/<slug>/thumbnail.jpg
+   LIBRARY: the app loads its rows and videos from the LittleRoots backend (managed on the Admin page).
+   If the backend can't be reached, it uses the last library it loaded, then the built-in list below.
    ================================================================= */
-const CONFIG = { VIDEO_BASE_URL: "" };
-/* YouTube mode: plays your channel videos inside the app. Works when the page is opened from a
-   normal web address (e.g. Netlify). Set false where embeds are blocked; then OK opens YouTube. */
+const PROD_API = "https://littleroots-api.littlerootsstudios.workers.dev";
+const API_BASE = (() => {
+  try { const q = new URLSearchParams(location.search).get("api"); if (q) return q.replace(/\/+$/, ""); } catch (e) {}
+  const sameHost = /^https?:$/.test(location.protocol) && (/\.workers\.dev$/.test(location.hostname) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname));
+  return sameHost ? location.origin : PROD_API;
+})();
+/* YouTube videos play inside the app's own player. Set false where embeds are blocked; then OK opens YouTube. */
 const EMBED_YOUTUBE = true;
 const ytLink = id => `https://youtu.be/${id}`;
 const ytThumb = (id, big) => `https://i.ytimg.com/vi/${id}/${big ? "maxresdefault" : "hqdefault"}.jpg`;
-const DEMO = !CONFIG.VIDEO_BASE_URL;
+const thumbOf = v => v.thumb || (v.yt ? ytThumb(v.yt) : null);
+const bigThumbOf = v => v.yt && !v.thumbCustom ? ytThumb(v.yt, true) : thumbOf(v);
+const canShowThumb = v => !!thumbOf(v) && (EMBED_YOUTUBE || !v.yt);
 
 /* Worlds: the big brand tiles (like Disney / Pixar / Marvel tiles). */
-const WORLDS = [
+let WORLDS = [
   { id: "bible",   name: "Bible Stories",   cover: "RVgRb-fnj4Q", scene: { sky: "sea",   motif: "ark" } },
   { id: "stories", name: "Zara's Stories",  cover: "sg7R0tbtFaw", scene: { sky: "warm",  motif: "heart" } },
   { id: "dance",   name: "Sing & Dance",    cover: "y_0YFXLvz-I", scene: { sky: "day",   motif: "notes" } },
@@ -300,12 +303,12 @@ const WORLDS = [
   { id: "bedtime", name: "Bedtime",         cover: "X5fQmWSYEKw", scene: { sky: "night", motif: "moon" } },
   { id: "loved",   name: "I Am Loved",      cover: "qBCaiEPYaJk", scene: { sky: "dawn",  motif: "dove" } },
 ];
-const WORLD_NAMES = { bible: "Bible Stories", stories: "Zara's Stories", dance: "Sing & Dance", worship: "Worship Songs", loved: "I Am Loved", shorts: "Little Moments" };
+let WORLD_NAMES = { bible: "Bible Stories", stories: "Zara's Stories", dance: "Sing & Dance", worship: "Worship Songs", loved: "I Am Loved", shorts: "Little Moments" };
 
 /* Every video from the LittleRoots YouTube channel.
    slug: page id · yt: YouTube video ID · world: category · ref: Bible passage (only where the video names one)
    bedtime: also listed in the Bedtime row · short: a YouTube Short (portrait) · parents: made for grown-ups */
-const CATALOG = [
+let CATALOG = [
   /* Bible Stories */
   { slug: "noahs-ark", yt: "RVgRb-fnj4Q", world: "bible", title: "Noah's Ark: The Biggest Boat Story!", ref: "Genesis 6–9", kind: "Bible story", age: "3–8", scene: { sky: "sea", motif: "ark" },
     desc: "The Bible story of Noah, the enormous boat he built, and the voyage that followed. A story about trusting God, following His instructions and His promises.",
@@ -403,10 +406,10 @@ const CATALOG = [
 ];
 
 const SERIES = {}; // story series (none yet)
-const HERO = "ade-and-the-jollof-mould";
+let HERO = "ade-and-the-jollof-mould";
 
 /* Rows on the home screen, in order. */
-const ROWS = [
+let ROWS = [
   { id: "continue", name: "Continue watching", pick: () => continueList() },
   { id: "shorts", name: "Little Moments", note: "Shorts · prayers and tips for parents", pick: () => CATALOG.filter(v => v.world === "shorts") },
   { id: "bible", name: "Bible Stories", note: "The Bible's big stories, retold for kids", pick: () => CATALOG.filter(v => v.world === "bible") },
@@ -417,7 +420,7 @@ const ROWS = [
   { id: "loved", name: "I Am Loved", note: "Affirmations for little hearts", pick: () => CATALOG.filter(v => v.world === "loved") },
 ];
 
-const NAV = [
+let NAV = [
   { label: "Home", target: "hero" },
   { label: "Bible Stories", target: "bible" },
   { label: "Zara's Stories", target: "stories" },
@@ -426,6 +429,49 @@ const NAV = [
   { label: "Bedtime", target: "bedtime" },
   { label: "Settings", target: "parents", cls: "parents" },
 ];
+
+/* ---------- library from the backend ---------- */
+const SCENES = { shorts: { sky: "dawn", motif: "lamp" }, bible: { sky: "sea", motif: "ark" }, stories: { sky: "warm", motif: "heart" }, dance: { sky: "day", motif: "notes" },
+  worship: { sky: "dusk", motif: "notes" }, loved: { sky: "dawn", motif: "dove" }, bedtime: { sky: "night", motif: "moon" } };
+const SCENE_LIST = [{ sky: "day", motif: "sun" }, { sky: "dusk", motif: "star" }, { sky: "warm", motif: "loaves" }, { sky: "sea", motif: "whale" }, { sky: "dawn", motif: "dove" }, { sky: "night", motif: "lamb" }];
+const BUILTIN_SCENES = {}; CATALOG.forEach(v => BUILTIN_SCENES[v.slug] = v.scene);
+
+/** Turns the backend's catalog into the app's rows, tiles, menu and featured story. Returns false if it's unusable. */
+function applyCatalog(data) {
+  if (!data || !Array.isArray(data.categories) || !Array.isArray(data.videos)) return false;
+  const vids = data.videos.filter(v => v && v.id && v.source && (v.source.type === "youtube" ? v.source.id : v.source.url));
+  const cats = data.categories.filter(c => vids.some(v => v.category === c.id));
+  if (!cats.length || !vids.length) return false;
+  CATALOG = vids.map((v, i) => {
+    const yt = v.source.type === "youtube" ? v.source.id : null;
+    return {
+      slug: v.id, title: v.title, desc: v.description || "", world: v.category, ref: v.ref || null, kind: v.kind || "", age: v.age || "",
+      talk: Array.isArray(v.talk) ? v.talk : [], short: !!v.short, parents: !!v.parents, bedtime: !!v.bedtime, featured: !!v.featured,
+      yt, hls: v.source.type === "hls" ? v.source.url : null,
+      thumb: v.thumbnail || (yt ? ytThumb(yt) : null), thumbCustom: !!(v.thumbnail && !/i\.ytimg\.com/.test(v.thumbnail)),
+      scene: BUILTIN_SCENES[v.id] || SCENES[v.category] || SCENE_LIST[i % SCENE_LIST.length],
+    };
+  });
+  vids.forEach(v => { if (v.duration) durs[v.id] = v.duration; });
+  WORLD_NAMES = {}; cats.forEach(c => WORLD_NAMES[c.id] = c.name);
+  const coverOf = (catId, coverId) => { const c = CATALOG.find(v => v.slug === coverId) || CATALOG.find(v => v.world === catId && !v.short) || CATALOG.find(v => v.world === catId); return c ? thumbOf(c) : null; };
+  WORLDS = cats.filter(c => c.world).map(c => ({ id: c.id, name: c.name, coverThumb: coverOf(c.id, c.cover), scene: SCENES[c.id] || SCENE_LIST[0] }));
+  const hasBedtime = CATALOG.some(v => v.bedtime);
+  const bedTile = { id: "bedtime", name: "Bedtime", coverThumb: (() => { const b = CATALOG.find(v => v.bedtime && !v.short); return b ? thumbOf(b) : null; })(), scene: SCENES.bedtime };
+  if (hasBedtime && WORLDS.length) WORLDS.splice(Math.max(1, WORLDS.length - 1), 0, bedTile);
+  const catRows = cats.map(c => ({ id: c.id, name: c.name, note: c.note || "", pick: () => CATALOG.filter(v => v.world === c.id) }));
+  if (hasBedtime) catRows.splice(Math.max(1, catRows.length - 1), 0, { id: "bedtime", name: "Bedtime", note: "Calm picks for winding down", pick: () => CATALOG.filter(v => v.bedtime) });
+  ROWS = [{ id: "continue", name: "Continue watching", pick: () => continueList() }, ...catRows];
+  const navTargets = WORLDS.length ? WORLDS : cats;
+  NAV = [{ label: "Home", target: "hero" }, ...navTargets.slice(0, 5).map(w => ({ label: w.name, target: w.id })), { label: "Settings", target: "parents", cls: "parents" }];
+  HERO = (CATALOG.find(v => v.featured && !v.short) || CATALOG.find(v => !v.short) || CATALOG[0]).slug;
+  return true;
+}
+function fetchCatalog(ms) {
+  const timeout = new Promise(res => setTimeout(() => res(null), ms || 8000));
+  const req = fetch(API_BASE + "/api/catalog", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null);
+  return Promise.race([req, timeout]);
+}
 
 /* ---------- small helpers ---------- */
 const LOGO_ORDER = { 2: 0, 1: 1, 9: 2, 8: 3, 3: 4, 10: 5, 0: 6, 5: 7, 6: 8, 4: 9, 7: 10 }; // path index -> reading order
@@ -619,9 +665,8 @@ function cardHTML(v, rowId, style) {
   const badge = v.parents ? `<span class="badge">For parents</span>` : v.short ? `<span class="badge new">Short</span>` : "";
   const art = style === "verse"
     ? `<q>${esc(v.verse)}</q>`
-    : v.yt && EMBED_YOUTUBE ? `<img src="${ytThumb(v.yt)}" alt="" loading="lazy" onerror="thumbFail(this)" onload="thumbLoad(this)">${badge}`
-    : DEMO || v.yt ? `<canvas data-scene='${JSON.stringify(v.scene)}' data-seed="${v.slug}" aria-hidden="true"></canvas>${badge}`
-           : `<img src="${CONFIG.VIDEO_BASE_URL}/${v.slug}/thumbnail.jpg" alt="" loading="lazy">${badge}`;
+    : canShowThumb(v) ? `<img src="${esc(thumbOf(v))}" alt="" loading="lazy" onerror="thumbFail(this)" onload="thumbLoad(this)">${badge}`
+    : `<canvas data-scene='${JSON.stringify(v.scene)}' data-seed="${v.slug}" aria-hidden="true"></canvas>${badge}`;
   return `<button class="card fx${style === "verse" ? " verse" : ""}${v.short ? " short" : ""}" data-fg="row-${rowId}" data-slug="${v.slug}">
     <span class="thumb">${art}${pct ? `<span class="bar"><i style="width:${pct}%"></i></span>` : ""}</span>
     <b>${esc(style === "verse" ? v.ref : v.title)}</b>
@@ -634,7 +679,8 @@ let thumbOK = 0; const thumbBad = new Set();
 function thumbLoad(img) { if (img.naturalWidth <= 120) return thumbFail(img); thumbOK++; settleThumbs(); }
 function thumbFail(img) {
   const card = img.closest(".card"); if (!card) return;
-  const v = bySlug(card.dataset.slug); thumbBad.add(v.slug);
+  const v = bySlug(card.dataset.slug); if (!v) return;
+  if (v.yt && !v.thumbCustom) thumbBad.add(v.slug); // only a missing YouTube thumbnail means a broken video link
   const c = document.createElement("canvas"); c.setAttribute("aria-hidden", "true"); img.replaceWith(c); paint(c, v.scene, v.slug);
   settleThumbs();
 }
@@ -657,13 +703,19 @@ function paintAll(root) { root.querySelectorAll("canvas[data-scene]").forEach(c 
 
 function renderStatic() {
   $("#nav").innerHTML = NAV.map((n, i) => `<button class="fx ${n.cls || ""}" data-fg="nav" data-target="${n.target}" aria-current="${i === 0}">${n.label}</button>`).join("");
-  $("#worlds").innerHTML = WORLDS.map(w => `<button class="world fx" data-fg="worlds" data-target="${w.id}"><canvas data-scene='${JSON.stringify(w.scene)}' data-seed="${w.id}" aria-hidden="true"></canvas>${EMBED_YOUTUBE && w.cover ? `<img src="${ytThumb(w.cover)}" alt="" onerror="this.remove()">` : ""}<span>${esc(w.name)}</span></button>`).join("");
+  $("#worlds").innerHTML = WORLDS.map(w => `<button class="world fx" data-fg="worlds" data-target="${w.id}"><canvas data-scene='${JSON.stringify(w.scene)}' data-seed="${w.id}" aria-hidden="true"></canvas>${(w.coverThumb || (EMBED_YOUTUBE && w.cover)) ? `<img src="${esc(w.coverThumb || ytThumb(w.cover))}" alt="" onerror="this.remove()">` : ""}<span>${esc(w.name)}</span></button>`).join("");
   paintAll($("#worlds"));
   const f = bySlug(HERO);
   $("#heroTitle").textContent = f.title;
   $("#heroDesc").textContent = f.desc;
   $("#heroMeta").innerHTML = `${f.ref ? `<span class="ref">${esc(f.ref)}</span>` : ""}<span>${f.mins ? f.mins + " min" : f.kind}</span><span>${esc(ageLabel(f))}</span>${f.series ? `<span>${esc(SERIES[f.series].name)} · Episode ${f.ep}</span>` : ""}${f.family ? "<span>Family Night pick</span>" : ""}`;
-  if (f.yt && EMBED_YOUTUBE) { const im = $("#heroImg"); im.onload = () => { if (im.naturalWidth > 200) im.hidden = false; else im.src = ytThumb(f.yt); }; im.onerror = () => { if (!im.src.includes("hqdefault")) im.src = ytThumb(f.yt); }; im.src = ytThumb(f.yt, true); }
+  const im = $("#heroImg"); im.hidden = true; im.onload = im.onerror = null; im.removeAttribute("src");
+  if (canShowThumb(f)) {
+    const big = bigThumbOf(f), small = thumbOf(f);
+    im.onload = () => { if (im.naturalWidth > 200) im.hidden = false; else if (im.src !== small) im.src = small; };
+    im.onerror = () => { if (im.src !== small) im.src = small; };
+    im.src = big;
+  }
   paint($("#heroArt"), f.scene, "hero", innerWidth > 760 ? .66 : .5);
   $("#heroPlay").onclick = () => f.yt && !EMBED_YOUTUBE ? openDetail(f.slug) : play(f.slug);
   $("#heroInfo").onclick = () => openDetail(f.slug);
@@ -671,11 +723,11 @@ function renderStatic() {
 
 /* ---------- detail sheet ---------- */
 function openDetail(slug) {
-  const v = bySlug(slug), d = $("#detail");
+  const v = bySlug(slug), d = $("#detail"); if (!v) return;
   const eps = v.series ? CATALOG.filter(e => e.series === v.series).sort((a, b) => a.ep - b.ep) : [];
   const resume = totalOf(v) && progress[slug] > 5 && progress[slug] < totalOf(v) - 5;
   d.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(v.title)}">
-    <div class="sheet-art"><canvas aria-hidden="true"></canvas>${v.yt && EMBED_YOUTUBE ? `<img class="hero-img" src="${ytThumb(v.yt)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : ""}</div>
+    <div class="sheet-art"><canvas aria-hidden="true"></canvas>${canShowThumb(v) ? `<img class="hero-img" src="${esc(thumbOf(v))}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : ""}</div>
     <div class="sheet-body">
       ${v.series ? `<span class="eyebrow">${esc(SERIES[v.series].name)} · Episode ${v.ep}</span>` : `<span class="eyebrow">${esc(WORLD_NAMES[v.world] || "")}</span>`}
       <h2>${esc(v.title)}</h2>
@@ -705,43 +757,11 @@ function openDetail(slug) {
 let P = null; // current playback state
 function play(slug) {
   const v = bySlug(slug), el = $("#player");
+  if (!v) return;
   if (settings.limit && watchedToday >= settings.limit * 60) return showBreak();
   el.className = "player";
-  if (v.yt) return playYouTube(v, el);
-  const total = v.mins * 60;
-  const start = progress[slug] > 5 && progress[slug] < total - 5 ? progress[slug] : 0;
-  el.innerHTML = `${DEMO ? `<canvas class="kb" aria-hidden="true"></canvas><div class="p-title"><span class="eyebrow">${esc(v.ref)}</span><h3>${esc(v.title)}</h3></div>` : `<video playsinline></video>`}
-    <div class="p-ui"><h2>${esc(v.title)}</h2>
-      <div class="p-track"><i></i></div>
-      <div class="p-row">
-        <button class="btn primary fx" data-fg="p" data-act="toggle">Pause</button>
-        <button class="btn fx" data-fg="p" data-act="back10">−10 s</button>
-        <button class="btn fx" data-fg="p" data-act="fwd10">+10 s</button>
-        <button class="btn fx" data-fg="p" data-act="close">Close</button>
-        <span class="time">0:00 / ${fmt(total)}</span>
-      </div>
-      ${DEMO ? `<span class="p-note">Demo playback. Set VIDEO_BASE_URL to your R2 address and this screen streams ${esc(v.slug)}/master.m3u8.</span>` : ""}
-    </div>`;
-  el.hidden = false;
-  P = { slug, total, t: start, paused: false, video: null, hls: null, tick: null, idle: null };
-  if (DEMO) {
-    paint(el.querySelector("canvas"), v.scene, slug + "-play", .5);
-    P.tick = setInterval(() => { if (!P.paused) { P.t = Math.min(P.total, P.t + 1); watchedToday++; } updatePlayer(); if (P.t >= P.total) endPlayback(true); }, 1000);
-  } else {
-    const video = el.querySelector("video"); P.video = video;
-    const url = `${CONFIG.VIDEO_BASE_URL}/${slug}/master.m3u8`;
-    if (window.Hls && Hls.isSupported()) { P.hls = new Hls({ capLevelToPlayerSize: true, startPosition: start }); P.hls.loadSource(url); P.hls.attachMedia(video); }
-    else { video.src = url; video.addEventListener("loadedmetadata", () => { video.currentTime = start; }, { once: true }); } // LG webOS, VIDAA and iOS play HLS natively
-    video.addEventListener("loadedmetadata", () => { P.total = video.duration || P.total; });
-    video.addEventListener("timeupdate", () => { P.t = video.currentTime; updatePlayer(); });
-    video.addEventListener("ended", () => endPlayback(true));
-    video.addEventListener("error", () => toast("This story couldn't load. Check the internet connection and try again."));
-    video.play().catch(() => { P.paused = true; updatePlayer(); });
-    P.tick = setInterval(() => { if (!P.paused) watchedToday++; }, 1000);
-  }
-  el.querySelectorAll("[data-act]").forEach(b => b.onclick = () => playerAction(b.dataset.act));
-  el.onpointermove = wake;
-  updatePlayer(); wake(); focusFirst(el);
+  if (v.yt || v.hls) return playStory(v, el);
+  toast("This story isn't available right now. Try another one.");
 }
 const ICON = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg>',
@@ -762,11 +782,51 @@ function loadYT() {
   });
   return ytApi;
 }
-const ytList = () => CATALOG.filter(v => v.yt);
-const nextOf = v => { const l = ytList(); return l[(l.indexOf(v) + 1) % l.length]; };
+const playable = () => CATALOG.filter(v => (v.yt || v.hls) && !BROKEN[v.slug]);
+const nextOf = v => { const l = playable(); return l[(l.indexOf(v) + 1) % l.length] || v; };
 
-function playYouTube(v, el) {
-  if (!EMBED_YOUTUBE) { window.open(ytLink(v.yt), "_blank", "noopener"); return; }
+/* Plays a video from LittleRoots storage (HLS) with the same controls as the YouTube player.
+   States match YouTube's: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering. */
+function videoEngine(url, start, me, onFail) {
+  const box = document.getElementById("ytp");
+  const video = document.createElement("video");
+  video.setAttribute("playsinline", ""); video.muted = true; video.preload = "auto";
+  box.appendChild(video);
+  let hls = null, state = -1, failed = false;
+  const emit = st => { state = st; if (P === me) engState(st); };
+  const fail = () => { if (failed) return; failed = true; onFail(); };
+  video.addEventListener("playing", () => emit(1));
+  video.addEventListener("pause", () => { if (!video.ended) emit(2); });
+  video.addEventListener("waiting", () => emit(3));
+  video.addEventListener("ended", () => emit(0));
+  video.addEventListener("error", () => { if (!hls) fail(); });
+  if (window.Hls && Hls.isSupported()) {
+    hls = new Hls({ capLevelToPlayerSize: true, startPosition: start || -1, maxBufferLength: 30 });
+    let mediaRetries = 0;
+    hls.on(Hls.Events.ERROR, (e, d) => {
+      if (!d.fatal) return;
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR && mediaRetries++ < 3) hls.startLoad();
+      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRetries++ < 3) hls.recoverMediaError();
+      else fail();
+    });
+    hls.loadSource(url); hls.attachMedia(video);
+  } else if (video.canPlayType("application/vnd.apple.mpegurl")) { // LG webOS, Hisense VIDAA, Safari play HLS natively
+    video.src = url;
+    if (start) video.addEventListener("loadedmetadata", () => { try { video.currentTime = start; } catch (e) {} }, { once: true });
+  } else { setTimeout(fail, 0); }
+  return {
+    playVideo: () => { const pr = video.play(); if (pr && pr.catch) pr.catch(() => { if (P === me && !P.started) coverMsg("Press OK to play"); }); },
+    pauseVideo: () => video.pause(),
+    seekTo: t => { try { video.currentTime = Math.max(0, t); } catch (e) {} },
+    getCurrentTime: () => video.currentTime || 0,
+    getDuration: () => (isFinite(video.duration) ? video.duration : 0),
+    getPlayerState: () => state,
+    mute: () => { video.muted = true; }, unMute: () => { video.muted = false; },
+    destroy: () => { try { if (hls) hls.destroy(); video.pause(); video.removeAttribute("src"); video.load(); video.remove(); } catch (e) {} },
+  };
+}
+function playStory(v, el) {
+  if (v.yt && !v.hls && !EMBED_YOUTUBE) { window.open(ytLink(v.yt), "_blank", "noopener"); return; }
   const tot = durs[v.slug] || 0;
   const start = progress[v.slug] > 5 && (!tot || progress[v.slug] < tot - 5) ? progress[v.slug] : 0;
   el.className = "player";
@@ -787,38 +847,44 @@ function playYouTube(v, el) {
         <span class="time">${fmt(start)} / ${tot ? fmt(tot) : "–:––"}</span>
       </div>
     </div>
-    <div class="p-cover"><img src="${ytThumb(v.yt, true)}" alt="" onerror="this.onerror=null;this.src='${ytThumb(v.yt)}'">
+    <div class="p-cover">${canShowThumb(v) ? `<img src="${esc(bigThumbOf(v))}" alt="" onerror="this.onerror=null;this.src='${esc(thumbOf(v))}'">` : ""}
       <div class="p-cover-txt">${animLogo(true)}<span class="eyebrow">LittleRoots presents</span><h3>${esc(v.title)}</h3><span class="hint p-msg"></span></div></div>`;
   el.hidden = false;
-  const me = P = { slug: v.slug, yt: true, t: start, start, total: tot, paused: false, started: false, ytp: null, idle: null, end: null, stingEnd: Date.now() + 4900 };
+  const me = P = { slug: v.slug, rich: true, t: start, start, total: tot, paused: false, started: false, ytp: null, idle: null, end: null, stingEnd: Date.now() + 4900 };
   playSting();
   P.tick = setInterval(() => {
-    if (!P || !P.ytp || !P.ytp.getCurrentTime) return;
-    P.t = P.ytp.getCurrentTime() || P.t; P.total = P.ytp.getDuration() || P.total;
-    updateYT();
+    if (!P || !P.eng || !P.eng.getCurrentTime) return;
+    P.t = P.eng.getCurrentTime() || P.t; P.total = P.eng.getDuration() || P.total;
+    updateRich();
   }, 250);
   P.watch = setInterval(() => { if (P && !P.paused && P.started) { watchedToday++; if (settings.limit && watchedToday >= settings.limit * 60) { endPlayback(false); showBreak(); } } }, 1000);
   el.querySelectorAll("[data-act]").forEach(b => b.onclick = e => { e.stopPropagation(); playerAction(b.dataset.act); });
   el.querySelector(".p-shield").onclick = () => { if (el.classList.contains("idle")) wake(); else playerAction("toggle"); };
-  el.querySelector(".p-track").onclick = e => { const r = e.currentTarget.getBoundingClientRect(); if (P && P.total && P.ytp) { P.ytp.seekTo((e.clientX - r.left) / r.width * P.total, true); wake(); } };
+  el.querySelector(".p-track").onclick = e => { const r = e.currentTarget.getBoundingClientRect(); if (P && P.total && P.eng) { P.eng.seekTo((e.clientX - r.left) / r.width * P.total, true); wake(); } };
   el.onpointermove = wake;
   focusFirst(el); setFocus(el.querySelector('[data-act="toggle"]'));
+  if (v.hls) {
+    P.eng = videoEngine(v.hls, start, me, () => { if (P === me) coverMsg("This story couldn't load. Check the internet connection and try again."); });
+    P.eng.mute(); P.eng.playVideo();
+    setTimeout(() => { if (P === me && !P.started) coverMsg("Press OK to play"); }, 3500);
+    return;
+  }
   loadYT().then(ok => {
     if (P !== me) return;
     if (!ok || !window.YT) return coverMsg("This story couldn't load. Check the internet connection and try again.");
-    P.ytp = new YT.Player("ytp", {
+    P.eng = new YT.Player("ytp", {
       videoId: v.yt, host: "https://www.youtube-nocookie.com", width: "100%", height: "100%",
       playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3, modestbranding: 1, playsinline: 1, cc_load_policy: 0, start: Math.floor(start), origin: location.origin },
       events: {
         onReady: e => { if (P !== me) return; e.target.mute(); e.target.playVideo(); setTimeout(() => { if (P === me && !P.started) coverMsg("Press OK to play"); }, 3500); },
-        onStateChange: e => P === me && ytState(e.data),
+        onStateChange: e => P === me && engState(e.data),
         onError: () => P === me && coverMsg("This story isn't available right now. Try another one."),
       },
     });
   });
 }
 function coverMsg(t) { const c = document.querySelector(".p-cover"); if (!c) return; c.classList.remove("gone"); c.querySelector(".p-msg").textContent = t; const sp = c.querySelector(".p-cover-txt .p-spin"); if (sp) sp.hidden = /OK/.test(t) ? true : sp.hidden; }
-function ytState(s) {
+function engState(s) {
   const el = $("#player");
   el.classList.toggle("buffering", s === 3);
   if (s === 1) {
@@ -828,7 +894,7 @@ function ytState(s) {
       // keep the intro card up until the sting has finished (and YouTube's title has faded), then start from the top with sound
       setTimeout(() => {
         if (P !== me) return;
-        try { if (Math.abs(P.ytp.getCurrentTime() - P.start) > 0.5) P.ytp.seekTo(P.start, true); P.ytp.unMute(); } catch (e) {}
+        try { if (Math.abs(P.eng.getCurrentTime() - P.start) > 0.5) P.eng.seekTo(P.start, true); P.eng.unMute(); } catch (e) {}
         const c = el.querySelector(".p-cover"); if (c) c.classList.add("gone");
       }, Math.max(2200, P.stingEnd - Date.now()));
     }
@@ -836,10 +902,10 @@ function ytState(s) {
   }
   if (s === 2) { P.paused = true; el.classList.add("paused"); wake(); }
   if (s === 0) showEnd();
-  updateYT();
+  updateRich();
 }
-function updateYT() {
-  const el = $("#player"); if (!P || !P.yt || el.hidden) return;
+function updateRich() {
+  const el = $("#player"); if (!P || !P.rich || el.hidden) return;
   el.querySelector(".p-track i").style.width = (P.total ? P.t / P.total * 100 : 0) + "%";
   el.querySelector(".time").textContent = `${fmt(P.t)} / ${P.total ? fmt(P.total) : "–:––"}`;
   const tg = el.querySelector('[data-act="toggle"]'); tg.innerHTML = P.paused ? ICON.play : ICON.pause; tg.setAttribute("aria-label", P.paused ? "Play" : "Pause");
@@ -849,7 +915,7 @@ function showEnd() {
   P.finished = true; let left = 8;
   const end = document.createElement("div"); end.className = "p-end";
   end.innerHTML = `<span class="eyebrow">Well done! Story finished</span>
-    <div class="next"><img src="${ytThumb(n.yt)}" alt="">
+    <div class="next">${canShowThumb(n) ? `<img src="${esc(thumbOf(n))}" alt="">` : `<span></span>`}
       <div style="display:grid;gap:.6rem"><span class="hint">Up next</span><h3>${esc(n.title)}</h3><span class="count">Starting in <b>${left}</b> s</span>
       <div class="actions"><button class="btn primary fx" data-fg="end" data-e="next">${ICON.play}Play now</button><button class="btn fx" data-fg="end" data-e="again">Watch again</button><button class="btn fx" data-fg="end" data-e="close">Back to LittleRoots</button></div></div></div>
     <div class="talk" style="max-width:40rem"><h3>Talk about it together</h3><ol>${v.talk.map(q => `<li>${esc(q)}</li>`).join("")}</ol></div>`;
@@ -863,30 +929,18 @@ function showEnd() {
 function playerAction(a) {
   if (!P) return;
   if (a === "close") return endPlayback(false);
-  if (P.yt) {
-    if (!P.ytp || !P.ytp.getPlayerState) return;
-    if (a === "toggle") P.paused ? P.ytp.playVideo() : P.ytp.pauseVideo();
-    if (a === "back10" || a === "fwd10") { P.ytp.seekTo(Math.max(0, P.t + (a === "fwd10" ? 10 : -10)), true); }
-    if (a === "next") { const n = nextOf(bySlug(P.slug)); endPlayback(false, true); return play(n.slug); }
-    return wake();
-  }
-  if (a === "toggle") { P.paused = !P.paused; if (P.video) P.paused ? P.video.pause() : P.video.play(); }
-  if (a === "back10" || a === "fwd10") { P.t = Math.max(0, Math.min(P.total - 1, P.t + (a === "fwd10" ? 10 : -10))); if (P.video) P.video.currentTime = P.t; }
-  updatePlayer(); wake();
-}
-function updatePlayer() {
-  const el = $("#player"); if (!P || P.yt || el.hidden) return;
-  el.querySelector(".p-track i").style.width = (P.t / P.total * 100) + "%";
-  el.querySelector(".time").textContent = `${fmt(P.t)} / ${fmt(P.total)}`;
-  el.querySelector('[data-act="toggle"]').textContent = P.paused ? "Play" : "Pause";
-  if (settings.limit && watchedToday >= settings.limit * 60) { endPlayback(false); showBreak(); }
+  if (!P.eng || !P.eng.getPlayerState) return;
+  if (a === "toggle") { if (!P.started || P.paused) P.eng.playVideo(); else P.eng.pauseVideo(); }
+  if (a === "back10" || a === "fwd10") P.eng.seekTo(Math.max(0, P.t + (a === "fwd10" ? 10 : -10)), true);
+  if (a === "next") { const n = nextOf(bySlug(P.slug)); endPlayback(false, true); return play(n.slug); }
+  wake();
 }
 function wake() { const el = $("#player"); el.classList.remove("idle"); if (!P) return; clearTimeout(P.idle); P.idle = setTimeout(() => P && !P.paused && el.classList.add("idle"), 3500); }
 function endPlayback(finished, chaining) {
   if (!P) return;
-  clearInterval(P.tick); clearInterval(P.watch); clearInterval(P.end); clearTimeout(P.idle); if (P.hls) P.hls.destroy(); if (P.video) P.video.pause();
-  if (P.ytp && P.ytp.destroy) { try { P.ytp.destroy(); } catch {} }
-  if (P.yt && P.total) { durs[P.slug] = Math.round(P.total); store.set("dur", durs); }
+  clearInterval(P.tick); clearInterval(P.watch); clearInterval(P.end); clearTimeout(P.idle);
+  if (P.eng && P.eng.destroy) { try { P.eng.destroy(); } catch {} }
+  if (P.total) { durs[P.slug] = Math.round(P.total); store.set("dur", durs); }
   delete progress[P.slug]; if (!(finished || P.finished) && P.t > 5) progress[P.slug] = P.t; // re-insert so the latest is last
   if (chaining) { store.set("progress", progress); P = null; return; }
   store.set("progress", progress); store.set("watched-" + new Date().toDateString(), watchedToday);
@@ -1033,8 +1087,33 @@ try { const ac = audioCtx(); if (ac && ac.state === "running") { playSting(); sp
   const el = document.querySelector("#splash"), t = (Date.now() - splashStart) / 1000;
   if (splashSound || !el || t > 4.7) return; splashSound = true; unlockAudio(); playSting(t);
 }, { passive: true }));
+// Library: last one loaded (instant), then the latest from the backend (usually arrives during the splash).
+let cachedLib = store.get("catalog", null);
+if (cachedLib && !applyCatalog(cachedLib)) cachedLib = null;
 renderStatic(); renderRows();
 setTimeout(() => { $("#splash").classList.add("done"); setTimeout(() => $("#splash").remove(), 700); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 400 : 6200);
 setFocus($("#heroPlay"));
+let pendingLib = null;
+function showLibrary(lib) {
+  const busy = P || topLayer() !== document.body;
+  if (busy) { pendingLib = lib; return; }
+  pendingLib = null;
+  const a = document.activeElement, keep = a && (a.dataset.slug || a.dataset.target || a.id);
+  if (!applyCatalog(lib)) return;
+  renderStatic(); renderRows();
+  const back = keep && (document.querySelector(`#rows [data-slug="${keep}"]`) || document.querySelector(`[data-target="${keep}"]`) || document.getElementById(keep));
+  setFocus(back || $("#heroPlay"));
+}
+function refreshLibrary() {
+  fetchCatalog().then(lib => {
+    if (!lib) return;
+    const same = cachedLib && JSON.stringify(lib) === JSON.stringify(cachedLib);
+    cachedLib = lib; store.set("catalog", lib);
+    if (!same) showLibrary(lib);
+  });
+}
+refreshLibrary();
+setInterval(() => { if (pendingLib) showLibrary(pendingLib); }, 2000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLibrary(); }); // app brought back to the front
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { paintAll(document); paint($("#heroArt"), bySlug(HERO).scene, "hero", innerWidth > 760 ? .66 : .5); }, 200); });
 </script>
