@@ -199,6 +199,7 @@ textarea { min-height: 84px; resize: vertical; }
             <div class="step" data-s="convert"><i></i><span>Converting for TVs and phones (a few minutes)</span></div>
             <div class="step" data-s="ready"><i></i><span>Ready to watch</span></div>
           </div>
+          <button type="button" class="btn gold" id="edConvert" hidden>Start converting</button>
           <label class="btn gold" for="edFile" id="edFileBtn">Upload video file</label>
           <input type="file" id="edFile" accept="video/*" hidden>
           <details id="edYtBox"><summary style="font-weight:800;cursor:pointer">Or use a YouTube link for now</summary>
@@ -259,7 +260,9 @@ document.querySelectorAll("[data-logo]").forEach(d => d.innerHTML = $("#logo").i
 function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2600); }
 
 async function api(path, opts = {}) {
-  const r = await fetch(API + path, { ...opts, headers: { ...(opts.body && !(opts.body instanceof Blob) ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}), ...(opts.headers || {}) } });
+  let r;
+  try { r = await fetch(API + path, { ...opts, headers: { ...(opts.body && !(opts.body instanceof Blob) ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}), ...(opts.headers || {}) } });
+  } catch (e) { throw new Error("Couldn't reach LittleRoots. Check the internet connection and try again."); }
   const data = r.status === 204 ? {} : await r.json().catch(() => ({}));
   if (r.status === 401 && !path.startsWith("/api/auth/")) { signOutLocal(); throw new Error("Please sign in again."); }
   if (!r.ok) throw new Error(data.message || "Something went wrong. Please try again.");
@@ -377,6 +380,8 @@ function openEditor(v) {
   $("#edDanger").hidden = !v; $("#edMsg").textContent = ""; $("#edMsg").className = "msg";
   $("#edSteps").hidden = true;
   $("#editor").hidden = false; $("#editor").scrollTop = 0; document.body.style.overflow = "hidden";
+  $("#edConvert").hidden = !(v && v.processing === "uploading");
+  if (v && v.processing === "uploading") { $("#edMsg").textContent = "This video was uploaded but not converted yet. Tap Start converting."; }
   if (v && (v.processing === "converting" || v.processing === "uploading")) { showSteps(v.processing === "converting" ? "convert" : "upload"); if (v.processing === "converting") poll(); }
   setTimeout(() => (v ? $("#edClose") : $("#edT")).focus(), 50);
 }
@@ -421,26 +426,54 @@ function showSteps(stage, failed) {
   });
   $("#edBar").hidden = stage !== "upload";
 }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function startConverting() {
+  let last;
+  for (let i = 0; i < 4; i++) {
+    try { return await api(`/api/admin/videos/${current.id}/convert`, { method: "POST" }); }
+    catch (e) { last = e; if (i === 3 || /upload didn't finish|isn't set up|still converting/i.test(e.message)) break; $("#edMsg").textContent = "Uploaded. Starting the converter… (try " + (i + 2) + " of 4)"; await wait(1500 * (i + 1)); }
+  }
+  throw last;
+}
+function convertingStarted() {
+  $("#edConvert").hidden = true;
+  showSteps("convert"); $("#edMsg").className = "msg ok"; $("#edMsg").textContent = "Uploaded. You can leave this page; converting continues on its own.";
+  poll();
+}
+function convertFailed(err) {
+  showSteps("convert", true); $("#edConvert").hidden = false;
+  $("#edMsg").className = "msg"; $("#edMsg").textContent = "The video is uploaded, but converting didn't start: " + err.message + " Tap Start converting to try again.";
+}
+$("#edConvert").onclick = async () => {
+  $("#edConvert").disabled = true; $("#edMsg").className = "msg"; $("#edMsg").textContent = "Starting…";
+  try { await startConverting(); convertingStarted(); }
+  catch (err) {
+    if (/upload didn't finish/i.test(err.message)) { $("#edConvert").hidden = true; showSteps("upload", true); $("#edMsg").textContent = "The upload didn't finish. Upload the video file again."; }
+    else convertFailed(err);
+  }
+  $("#edConvert").disabled = false;
+};
 $("#edFile").onchange = async () => {
   const file = $("#edFile").files[0]; $("#edFile").value = "";
   if (!file) return;
   if (!current && !(await save(true))) return;
-  showSteps("upload"); $("#edFileBtn").hidden = true; $("#edMsg").textContent = "";
+  $("#edPct").textContent = "0%"; $("#edBar i").style.width = "0%"; $("#edConvert").hidden = true;
+  showSteps("upload"); $("#edFileBtn").hidden = true; $("#edMsg").className = "msg"; $("#edMsg").textContent = "Keep this page open until the upload reaches 100%.";
+  let uploadUrl;
+  try { uploadUrl = (await api(`/api/admin/videos/${current.id}/upload`, { method: "POST", body: JSON.stringify({ filename: file.name, size: file.size }) })).uploadUrl; }
+  catch (err) { showSteps("upload", true); $("#edMsg").textContent = "Couldn't prepare the upload: " + err.message; $("#edFileBtn").hidden = false; return; }
   try {
-    const { uploadUrl } = await api(`/api/admin/videos/${current.id}/upload`, { method: "POST", body: JSON.stringify({ filename: file.name, size: file.size }) });
     await new Promise((resolve, reject) => {
       const x = new XMLHttpRequest(); x.open("PUT", uploadUrl);
       x.setRequestHeader("Content-Type", file.type || "video/mp4");
       x.upload.onprogress = e => { if (e.lengthComputable) { const p = Math.round(e.loaded / e.total * 100); $("#edPct").textContent = p + "%"; $("#edBar i").style.width = p + "%"; } };
-      x.onload = () => x.status < 300 ? resolve() : reject(new Error("The upload was interrupted. Check your connection and try again."));
-      x.onerror = () => reject(new Error("The upload was interrupted. Check your connection and try again."));
+      x.onload = () => x.status < 300 ? resolve() : reject(new Error(`storage refused the file (code ${x.status}). ` + (x.status === 403 ? "The storage keys may be wrong." : "Try again.")));
+      x.onerror = () => reject(new Error("the connection to storage dropped. Check the internet and try again."));
       x.send(file);
     });
-    await api(`/api/admin/videos/${current.id}/convert`, { method: "POST" });
-    showSteps("convert"); $("#edMsg").className = "msg ok"; $("#edMsg").textContent = "Uploaded. You can leave this page; converting continues on its own.";
-    poll();
-  } catch (err) { showSteps("upload", true); $("#edMsg").className = "msg"; $("#edMsg").textContent = err.message; }
+  } catch (err) { showSteps("upload", true); $("#edMsg").textContent = "Upload failed: " + err.message; $("#edFileBtn").hidden = false; return; }
   $("#edFileBtn").hidden = false;
+  try { await startConverting(); convertingStarted(); } catch (err) { convertFailed(err); }
 };
 function poll() {
   clearInterval(polling);
