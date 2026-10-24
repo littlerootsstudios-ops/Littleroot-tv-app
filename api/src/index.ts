@@ -5,6 +5,13 @@ import { admin, converterCallback } from "./admin";
 
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
+// www.littlerootsstudios.com -> littlerootsstudios.com
+app.use("*", async (c, next) => {
+  const u = new URL(c.req.url);
+  if (u.hostname.startsWith("www.")) { u.hostname = u.hostname.slice(4); return c.redirect(u.toString(), 301); }
+  await next();
+});
+
 // TVs and phones load the app from other addresses, so the API accepts any origin (admin sign-in uses tokens, not cookies).
 app.use("/api/*", cors({ origin: "*", allowHeaders: ["Authorization", "Content-Type"], allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], maxAge: 86400 }));
 app.use("/api/*", loadUser);
@@ -13,6 +20,11 @@ app.get("/api/health", c => c.json({ ok: true }));
 
 /* ================= Catalog: everything the TV and phone apps show ================= */
 const bool = (v: unknown) => v === 1 || v === true;
+// Thumbnails saved while videos were on the free r2.dev address are served from the current storage address
+export function mediaUrl(env: Env, url: string | null) {
+  if (!url || !env.MEDIA_PUBLIC_URL) return url;
+  return url.replace(/^https:\/\/pub-[a-z0-9]+\.r2\.dev/, env.MEDIA_PUBLIC_URL.replace(/\/+$/, ""));
+}
 export function streamUrl(env: Env, v: any) {
   if (v.source_type === "hls" && v.processing === "ready") return `${env.MEDIA_PUBLIC_URL}/${v.media_path}/master.m3u8`;
   return null;
@@ -21,7 +33,7 @@ export function publicVideo(env: Env, v: any) {
   return {
     id: v.id, title: v.title, description: v.description, category: v.category_id, ref: v.bible_ref, kind: v.kind, age: v.age,
     talk: JSON.parse(v.talk || "[]"), short: bool(v.is_short), parents: bool(v.for_parents), bedtime: bool(v.bedtime),
-    featured: bool(v.featured), thumbnail: v.thumbnail_url, duration: v.duration_s,
+    featured: bool(v.featured), thumbnail: mediaUrl(env, v.thumbnail_url), duration: v.duration_s,
     source: v.source_type === "youtube" ? { type: "youtube", id: v.source_id } : { type: "hls", url: streamUrl(env, v) },
   };
 }

@@ -264,7 +264,7 @@ html, body { margin: 0; }
   try {
     var q = location.search;
     if (/[?&](tv|tvapp)=1/.test(q) || window.PalmSystem || !/^https?:$/.test(location.protocol)) return;
-    if (!/\.workers\.dev$|^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+    if (!/\.workers\.dev$|(^|\.)littlerootsstudios\.com$|^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
     var touch = (navigator.maxTouchPoints || 0) > 0 && window.matchMedia && matchMedia("(pointer: coarse)").matches && !matchMedia("(pointer: fine)").matches;
     if (touch) location.replace(location.pathname.replace(/\/?$/, "/") + "m/" + q);
   } catch (e) {}
@@ -326,7 +326,7 @@ const API_BASE = (() => {
     const q = new URLSearchParams(location.search).get("api");
     if (q) return q.replace(/\/+$/, "");
   } catch (e) {}
-  const sameHost = /^https?:$/.test(location.protocol) && (/\.workers\.dev$/.test(location.hostname) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname));
+  const sameHost = /^https?:$/.test(location.protocol) && (/\.workers\.dev$|(^|\.)littlerootsstudios\.com$/.test(location.hostname) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname));
   return sameHost ? location.origin : PROD_API;
 })();
 /* YouTube videos play inside the app's own player. Set false where embeds are blocked; then OK opens YouTube. */
