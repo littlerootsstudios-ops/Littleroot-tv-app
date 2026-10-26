@@ -30,5 +30,5 @@ node tools/build-tv.mjs src/littleroots-tv.html index.html ./node_modules
 The build adds the full page header, converts newer JavaScript to an older form, and adds layout fallbacks for older TV browsers.
 
 ## Live addresses
-- TV app: https://littlerootsstudios.com/
-- Admin page: https://littlerootsstudios.com/admin/
+- TV app: https://app.littlerootsstudios.com/
+- Admin page: https://app.littlerootsstudios.com/admin/
