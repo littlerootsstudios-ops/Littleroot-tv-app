@@ -1,7 +1,6 @@
 <title>LittleRoots TV</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,wght@9..144,100,500;9..144,100,700;9..144,100,900&family=Nunito:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 /* Layout: a living-room TV app. Full-bleed storybook hero, Disney-style "worlds" tiles, then Netflix-style rows. Built for a 10-foot screen and a remote; also works by touch. */
 :root {
@@ -285,7 +284,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 <div class="player" id="player" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<script src="/vendor/hls-1.5.13.min.js"></script>
 <script>
 /* =================================================================
    LIBRARY: the app loads its rows and videos from the LittleRoots backend (managed on the Admin page).
