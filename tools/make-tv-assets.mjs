@@ -41,7 +41,7 @@ ${clear ? "body{background:transparent!important}" : ""}
 svg{width:${Math.round(w * share)}px;height:auto;display:block}
 p{margin:${Math.round(h * 0.035)}px 0 0;color:#E7C27F;font-weight:800;letter-spacing:.06em;font-size:${Math.round(h * 0.034)}px}
 p b{color:#F3EBD8;font-weight:800}
-</style></head><body>${svg}${tagline ? "<p>Small seeds. Deep roots. <b>Stories for every generation.</b></p>" : ""}</body></html>`);
+</style></head><body>${svg}${tagline ? "<p><b>Growing little hearts</b> in God’s Word.</p>" : ""}</body></html>`);
   await page.waitForTimeout(tagline ? 1200 : 150);
   fs.mkdirSync(path.dirname(path.join(ROOT, file)), { recursive: true });
   await page.screenshot({ path: path.join(ROOT, file), type: jpg ? "jpeg" : "png", omitBackground: !!clear, quality: jpg ? 92 : undefined });

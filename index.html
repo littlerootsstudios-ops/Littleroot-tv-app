@@ -153,8 +153,7 @@ body::before { content: ""; position: fixed; top: 0; right: 0; bottom: auto; lef
 .splash .tagline { margin: 0; padding-inline: 1.5rem; font-family: var(--display); font-variation-settings: "SOFT" 100; font-weight: 500; font-style: italic; font-size: 2.2vw; font-size: clamp(1.05rem, 2.2vw, 1.9rem); line-height: 1.3; color: var(--parchment); text-wrap: balance; }
 .splash .tagline span { display: inline-block; opacity: 0; animation: tag-in .7s cubic-bezier(.2, .8, .3, 1) both; }
 .splash .tagline span:nth-child(1) { animation-delay: 3.5s; }
-.splash .tagline span:nth-child(2) { animation-delay: 3.9s; }
-.splash .tagline span:nth-child(3) { animation-delay: 4.3s; color: var(--gold-soft); }
+.splash .tagline span:nth-child(2) { animation-delay: 4s; color: var(--gold-soft); }
 @keyframes tag-in { from { opacity: 0; transform: translateY(.6em); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .splash .tagline span { animation: lr-fade .6s both; } }
 
@@ -2260,7 +2259,7 @@ addEventListener("scroll", () => {
   passive: true
 });
 /* ---------- start ---------- */
-$("#splash").innerHTML = animLogo(true) + `<p class="tagline"><span>Small seeds.</span> <span>Deep roots.</span> <span>Stories for every generation.</span></p>`;
+$("#splash").innerHTML = animLogo(true) + `<p class="tagline"><span>Growing little hearts</span> <span>in God’s Word.</span></p>`;
 const splashStart = Date.now();
 let splashSound = false;
 try {
