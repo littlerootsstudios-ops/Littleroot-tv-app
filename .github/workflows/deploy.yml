@@ -27,7 +27,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Which version of the phone app to publish
         id: mobile
@@ -35,13 +35,13 @@ jobs:
         run: echo "ref=$(tr -d '[:space:]' < mobile-app.ref)" >> "$GITHUB_OUTPUT"
 
       - name: Get the phone app (littleroots-mobile-app repo)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: littlerootsstudios-ops/littleroots-mobile-app
           ref: ${{ steps.mobile.outputs.ref }}
           path: mobile
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm

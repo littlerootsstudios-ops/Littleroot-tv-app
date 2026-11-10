@@ -39,7 +39,7 @@ jobs:
       CALLBACK_URL: ${{ inputs.callback_url }}
       CONVERTER_SECRET: ${{ secrets.CONVERTER_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install FFmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
